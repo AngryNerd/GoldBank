@@ -41,11 +41,11 @@ public class BankInv {
 				for (int i = 0; i < inv.getSize(); i++){
 					if (inv.getItem(i) != null){
 						if (inv.getItem(i).getType() == Material.GOLD_NUGGET)
-							gold = gold + inv.getItem(i).getAmount();
+							gold += inv.getItem(i).getAmount();
 						else if (inv.getItem(i).getType() == Material.GOLD_INGOT)
-							gold = gold + (inv.getItem(i).getAmount() * 9);
+							gold += (inv.getItem(i).getAmount() * 9);
 						else if (inv.getItem(i).getType() == Material.GOLD_BLOCK)
-							gold = gold + (inv.getItem(i).getAmount() * 81);
+							gold += (inv.getItem(i).getAmount() * 81);
 					}
 				}
 				return gold;

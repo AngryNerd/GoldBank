@@ -15,7 +15,7 @@ public class PlayerInv extends JavaPlugin {
 	/**
 	 * Attempts to find the amount of gold in a specfied player's inventory.
 	 * @param p The player who's inventory should be searched
-	 * @return
+	 * @return The amount of gold (in nuggets) in the player's inventory
 	 */
 	public static int getGoldInPlayerInv(Player p){
 		Inventory inv = p.getInventory();
@@ -23,11 +23,11 @@ public class PlayerInv extends JavaPlugin {
 		for (int i = 0; i < inv.getSize(); i++){
 			if (inv.getItem(i) != null){
 				if (inv.getItem(i).getType() == Material.GOLD_NUGGET)
-					gold = gold + inv.getItem(i).getAmount();
+					gold += inv.getItem(i).getAmount();
 				else if (inv.getItem(i).getType() == Material.GOLD_INGOT)
-					gold = gold + (inv.getItem(i).getAmount() * 9);
+					gold += (inv.getItem(i).getAmount() * 9);
 				else if (inv.getItem(i).getType() == Material.GOLD_BLOCK)
-					gold = gold + (inv.getItem(i).getAmount() * 81);
+					gold += (inv.getItem(i).getAmount() * 81);
 			}
 		}
 		return gold;
@@ -88,20 +88,75 @@ public class PlayerInv extends JavaPlugin {
 			int remaining = total;
 			p.updateInventory();
 			if (GoldBank.getAmountInInv(inv, Material.GOLD_BLOCK) >= (amount / 81) && amount / 81 >= 1){
-				removeFromPlayerInv(p, Material.GOLD_BLOCK, amount / 81);
+				int remainingB = amount / 81;
+				ItemStack[] contents = inv.getContents();
+				for (ItemStack is : contents){
+					if (is != null){
+						if (is.getType() == Material.GOLD_BLOCK){
+							if(is.getAmount() > remainingB){
+								is.setAmount(is.getAmount() - remainingB);
+								remainingB = 0;
+							}
+							else if(is.getAmount() <= remainingB){
+								if (remainingB > 0){
+									remainingB -= is.getAmount();
+									is.setType(Material.AIR);
+								}
+							}
+						}
+					}
+				}
+				inv.setContents(contents);
 				removedBlock = amount / 81;
 				removedBlock = removedBlock * 81;
 				remaining = total - removedBlock;
 			}
 			if (GoldBank.getAmountInInv(inv, Material.GOLD_INGOT) >= (amount / 9) && remaining >= 9){
-				inv.remove(new ItemStack(Material.GOLD_NUGGET, amount / 9));
+				int remainingI = remaining;
+				ItemStack[] contents = inv.getContents();
+				for (ItemStack is : contents){
+					if (is != null){
+						if (is.getType() == Material.GOLD_BLOCK){
+							if(is.getAmount() > remainingI){
+								is.setAmount(is.getAmount() - remainingI);
+								remainingI = 0;
+							}
+							else if(is.getAmount() <= remainingI){
+								if (remainingI > 0){
+									remainingI -= is.getAmount();
+									is.setType(Material.AIR);
+								}
+							}
+						}
+					}
+				}
+				inv.setContents(contents);
 				removedIngot = amount / 9;
 				removedIngot = removedIngot * 9;
 				remaining = remaining - removedIngot;
 			}
 			if (remaining != 0){
-				if (GoldBank.getAmountInInv(inv, Material.GOLD_NUGGET) >= remaining)
-					inv.remove(new ItemStack(Material.GOLD_NUGGET, remaining));
+				if (GoldBank.getAmountInInv(inv, Material.GOLD_NUGGET) >= remaining){
+					int remainingN = remaining;
+					ItemStack[] contents = inv.getContents();
+					for (ItemStack is : contents){
+						if (is != null){
+							if (is.getType() == Material.GOLD_BLOCK){
+								if(is.getAmount() > remainingN){
+									is.setAmount(is.getAmount() - remainingN);
+									remainingN = 0;
+								}
+								else if(is.getAmount() <= remainingN){
+									if (remainingN > 0){
+										remainingN -= is.getAmount();
+										is.setType(Material.AIR);
+									}
+								}
+							}
+						}
+					}
+					inv.setContents(contents);
+				}
 			}
 			return true;
 		}
