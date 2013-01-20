@@ -1,0 +1,84 @@
+# ########################## #
+# # GoldBank Configuration # #
+# ########################## #
+
+#Define the amount of interest to give players each week -- 0-1 (ex. 5% = 0.05)
+interest: 0.03
+
+#Define which day of the week to give interest on
+dayofweek: Sunday
+
+#Define size and fee for each GoldBank sign tier
+tiers:
+  '1':
+    size: 18
+    fee: 0
+  '2':
+    size: 36
+    fee: 0
+  '3':
+    size: 54
+    fee: 0
+
+#Define fee for using [GoldATM] signs (in nuggets)
+atmfee: 0
+
+#Define maximum number of gold nuggets each mob should drop on death (0-256)
+mobdrops:
+  creeper: 3
+  zombie: 2
+  skeleton: 2
+  spider: 2
+  blaze: 3
+  enderman: 3
+  witch: 32
+  slime: 1
+  magmacube: 1
+  ghast: 9
+  cavespider: 3
+  enderdragon: 128
+  zombiepigman: 1
+  silverfish: 2
+  witherskeleton: 2 
+  wither: 128
+  pig: 0
+  cow: 0
+  mooshroom: 0
+  chicken: 0
+  squid: 0
+  sheep: 0
+  snowgolem: 0
+  irongolem: 5
+  ocelot: 0
+  bat: 0
+  wolf: 1
+  giant: 32
+
+#Should gold drops be disabled for mobs from spawners?
+disablefarms: true
+
+#Should players be permitted to sell damaged tools?
+selldamagedtools: false
+
+#Should players be given a cookie should their wallet creation fail?
+give-cookie-when-wallet-creation-fails: false
+
+#How large should wallets be?
+walletsize: 9
+
+#How often should mobs drop rare gold items? (decimal 0-1)
+rare-drop-rate: 0.01
+
+#Which mobs should rare drops be disabled for? (Mobs with a maximum regular gold drop of zero are already included)
+disable-rare-drops-for:
+  - mob1
+  - mob2
+
+#Should gold drops be disabled if the mob loses more than half its health to other damage types (burning, falling, etc.)?
+disable-drops-on-external-damage: false
+
+#Should the plugin's auto-update feature be enabled?
+enable-auto-update: true
+
+#Allow the plugin to send usage statistics to MCStats (pretty please)?
+enable-metrics: true

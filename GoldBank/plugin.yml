@@ -1,0 +1,169 @@
+name: GoldBank
+version: 2.2.1
+main: net.amigocraft.GoldBank.GoldBank
+commands:
+  gb:
+    reload:
+      description: Reloads the config.
+      usage: /gb reload
+    view:
+      description: Opens the player's bank inventory if no additional arguments are given; opens a specified player's bank inventory otherwise
+      usage: /gb view {player}
+  api:
+      description: Can I has API?
+      usage: /api
+permissions:
+  goldbank.*:
+    description: Contains all permissions
+    children:
+      goldbank.sign.bank.use: true
+      goldbank.sign.bank.use.others: true
+      goldbank.sign.bank.create: true
+      goldbank.sign.bank.destroy.others: true
+      goldbank.sign.bank.unclaim.others: true
+      goldbank.sign.bank.destroy.master: true
+      goldbank.sign.atm.use: true
+      goldbank.sign.atm.create: true
+      goldbank.sign.atm.destroy: true
+      goldbank.fee.bank.exempt: true
+      goldbank.fee.atm.exempt: true
+      goldbank.reload: true
+      goldbank.sign.shop.use: true
+      goldbank.sign.shop.create.admin: true
+      goldbank.sign.shop.destroy.*: true
+      goldbank.sign.shop.access: true
+      goldbank.view.others: true
+      goldbank.wallet.open: true
+      goldbank.wallet.view: true
+      goldbank.wallet.craft: true
+  goldbank.sign.*:
+    description: Allows use and manipulation of all GoldBank signs
+    children:
+      goldbank.sign.bank.use: true
+      goldbank.sign.bank.use.others: true
+      goldbank.sign.bank.create: true
+      goldbank.sign.bank.unclaim.others: true
+      goldbank.sign.bank.destroy.master: true
+      goldbank.sign.atm.use: true
+      goldbank.sign.atm.create: true
+      goldbank.sign.atm.destroy: true
+      goldbank.sign.shop.use: true
+      goldbank.sign.shop.create.admin: true
+      goldbank.sign.shop.destroy.*: true
+      goldbank.sign.shop.access: true
+  goldbank.sign.bank.*:
+    description: Allows use and manipulation of all [GoldBank] signs
+    children:
+      goldbank.sign.bank.use: true
+      goldbank.sign.bank.use.others: true
+      goldbank.sign.bank.create: true
+      goldbank.sign.bank.unclaim.others: true
+      goldbank.sign.bank.destroy.master: true
+  goldbank.sign.atm.*:
+    description: Allows use and manipulation of all [GoldATM] signs
+    children:
+      goldbank.sign.atm.use: true
+      goldbank.sign.atm.use.others: true
+      goldbank.sign.atm.create: true
+      goldbank.sign.atm.destroy: true
+  goldbank.sign.shop.*:
+    description: Allows use and manipulation of all GoldShop signs and chests
+    default: op
+    children:
+      goldbank.sign.shop.use: true
+      goldbank.sign.shop.create.admin: true
+      goldbank.sign.shop.destroy.*: true
+      goldbank.sign.shop.access: true
+  goldbank.sign.bank.use:
+    description: Allows use of own [GoldBank] sign
+    default: true
+  goldbank.sign.bank.use.others:
+    description: Allows use of all [GoldBank] signs
+    default: op
+    children:
+      goldbank.sign.bank.use: true
+  goldbank.sign.bank.create:
+    description: Allows creation of [GoldBank] signs
+    default: op
+  goldbank.sign.bank.destroy:
+    description: Allows destruction of all standard [GoldBank] signs
+    default: op
+  goldbank.sign.bank.destroy.master:
+    description: Allows destruction of all standard and master [GoldBank] signs
+    default: op
+  goldbank.sign.bank.unclaim:
+    description: Allows unclaiming of own [GoldBank] sign
+    default: true
+  goldbank.sign.bank.unclaim.others:
+    description: Allows unclaiming of all [GoldBank] signs
+    default: op
+    children:
+      goldbank.sign.bank.unclaim: true
+  goldbank.sign.shop.use:
+    description: Allows use of GoldShop signs
+    default: true
+  goldbank.sign.shop.create:
+    description: Allows creation of standard GoldShop signs (must have chest beneath them!)
+    default: true
+  goldbank.sign.shop.create.admin:
+    description: Allows creation of standard and Admin GoldShop signs
+    default: op
+    children:
+      goldbank.sign.shop.create: true
+  goldbank.sign.shop.destroy:
+    description: Allows destruction of players' own GoldShop signs
+    default: true
+  goldbank.sign.shop.destroy.*:
+    description: Allows destruction of all GoldShop signs
+    default: op
+    children:
+      goldbank.sign.shop.destroy: true
+  goldbank.sign.shop.access:
+    description: Allows access to GoldShop chests of others
+    default: op
+  goldbank.sign.atm.use:
+    description: Allows use of [GoldATM] signs
+    default: true
+  goldbank.sign.atm.create:
+    description: Allows creation of [GoldATM] signs
+    default: op
+  goldbank.sign.atm.destroy:
+    description: Allows destruction of [GoldATM] signs
+    default: op
+  goldbank.reload:
+    description: Allows use of /gb reload command
+    default: op
+  goldbank.fee.bank.exempt:
+    description: Players with this node will not be charged for [GoldBank] signs
+    default: false
+  goldbank.fee.atm.exempt:
+    description: Players with this node will not be charged for [GoldATM] signs
+    default: op
+  goldbank.view:
+    description: Allows opening of own bank inventory via command
+    default: op
+  goldbank.view.others:
+    description: Allows opening of others' bank inventories via command
+    default: op
+    children:
+      goldbank.view: true
+  goldbank.wallet.*:
+    description: Allows crafting and full manipulation of all wallets
+    children:
+      goldbank.wallet.craft: true
+      goldbank.wallet.open: true
+      goldbank.wallet.view: true
+  goldbank.wallet.craft:
+    description: Allows crafting of GoldBank wallets
+    default: true
+  goldbank.wallet.open.own:
+    description: Allows opening of player's own wallet
+    default: true
+  goldbank.wallet.open:
+    description: Allows opening of all wallets
+    default: true
+    children:
+      goldbank.wallet.open.own: true
+  goldbank.wallet.view:
+    description: Allows viewing of all wallets by command
+    default: op
