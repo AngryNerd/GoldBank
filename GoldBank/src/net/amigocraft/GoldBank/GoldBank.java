@@ -1931,7 +1931,8 @@ public class GoldBank extends JavaPlugin implements Listener {
 		if (rline.contains(":")){
 			matInfo = rline.split(":");
 			rline = matInfo[0];
-			data = matInfo[1];
+			if (matInfo.length > 1)
+				data = matInfo[1];
 		}
 		rline = rline.replace(" ", "_");
 		boolean isValidInt = false;
