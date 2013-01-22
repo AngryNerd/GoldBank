@@ -33,6 +33,7 @@ import org.apache.commons.lang.WordUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.DyeColor;
+import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -70,12 +71,14 @@ import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.inventory.CraftItemEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.inventory.PrepareItemCraftEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.ShapedRecipe;
+import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.material.MaterialData;
@@ -102,15 +105,19 @@ public class GoldBank extends JavaPlugin implements Listener {
 	public void onEnable(){
 
 		// autoupdate
-		try {new AutoUpdate(this);}
-		catch (Exception e){e.printStackTrace();}
+		if (getConfig().getBoolean("enable-auto-update")){
+			try {new AutoUpdate(this);}
+			catch (Exception e){e.printStackTrace();}
+		}
 
 		// submit metrics
-		try {
-			Metrics metrics = new Metrics(this);
-			metrics.start();
+		if (getConfig().getBoolean("enable-metrics")){
+			try {
+				Metrics metrics = new Metrics(this);
+				metrics.start();
+			}
+			catch (IOException e) {log.warning("[GoldBank] Failed to submit statistics to Plugin Metrics");}
 		}
-		catch (IOException e) {log.warning("[GoldBank] Failed to submit statistics to Plugin Metrics");}
 
 		// register events and the plugin variable
 		getServer().getPluginManager().registerEvents(this, this);
@@ -209,6 +216,14 @@ public class GoldBank extends JavaPlugin implements Listener {
 				st.executeUpdate("ALTER TABLE chestdata ADD world VARCHAR(100) DEFAULT 'world' NOT NULL");
 				st.executeUpdate("UPDATE chestdata SET world = '" + world + "'");
 			}
+			st.executeUpdate("CREATE TABLE IF NOT EXISTS shoplog (" +
+					"id INTEGER NOT NULL PRIMARY KEY," +
+					"shop INTEGER NOT NULL," +
+					"player VARCHAR(20) NOT NULL," +
+					"action INTEGER NOT NULL," +
+					"material INTEGER," +
+					"data INTEGER," +
+					"amount INTEGER)");
 		}
 		catch (Exception e){
 			e.printStackTrace();
@@ -693,6 +708,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 									st = conn.createStatement();
 									rs = st.executeQuery("SELECT * FROM shops WHERE world = '" + e.getClickedBlock().getWorld().getName() + "' AND x = '" + e.getClickedBlock().getX() + "' AND y = '" + e.getClickedBlock().getY() + "' AND z = '" + e.getClickedBlock().getZ() + "'");
 									String admin = rs.getString("admin");
+									int shopId = rs.getInt("id");
 									int matId = rs.getInt("material");
 									Material mat = Material.getMaterial(matId);
 									String matName = mat.toString();
@@ -756,6 +772,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 													}
 													inv.addItem(new ItemStack[] {buyIs});
 													player.updateInventory();
+													st.executeUpdate("INSERT INTO shoplog (shop, player, action, material, data, quantity) VALUES ('" + shopId + "', '" + player.getName() + "', '0', '" + mat.getId() + "', '" + dataValue + "', '" + buyIs.getAmount() + "')");
 													String buyPriceS = "s";
 													if (buyPrice == 1)
 														buyPriceS = "";
@@ -835,6 +852,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 													inv.addItem(new ItemStack[] {
 															new ItemStack(Material.GOLD_INGOT, sellPrice)});
 													player.updateInventory();
+													st.executeUpdate("INSERT INTO shoplog (shop, player, action, material, data, quantity) VALUES ('" + shopId + "', '" + player.getName() + "', '1', '" + mat.getId() + "', '" + dataValue + "', '" + sellIs.getAmount() + "')");
 													String sellAmountS = "s";
 													if (sellAmount == 1)
 														sellAmountS = "";
@@ -930,6 +948,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 															}
 															inv.addItem(new ItemStack[] {buyIs});
 															player.updateInventory();
+															st.executeUpdate("INSERT INTO shoplog (shop, player, action, material, data, quantity) VALUES ('" + shopId + "', '" + player.getName() + "', '0', '" + mat.getId() + "', '" + dataValue + "', '" + buyIs.getAmount() + "')");
 															String buyPriceS = "s";
 															if (buyPrice == 1)
 																buyPriceS = "";
@@ -1051,6 +1070,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 																	new ItemStack(Material.GOLD_INGOT, sellPrice)});
 															chestInv.addItem(new ItemStack[] {sellIs});
 															player.updateInventory();
+															st.executeUpdate("INSERT INTO shoplog (shop, player, action, material, data, quantity) VALUES ('" + shopId + "', '" + player.getName() + "', '1', '" + mat.getId() + "', '" + dataValue + "', '" + sellIs.getAmount() + "')");
 															String sellPriceS = "s";
 															if (sellPrice == 1)
 																sellPriceS = "";
@@ -1291,8 +1311,9 @@ public class GoldBank extends JavaPlugin implements Listener {
 					i = rs.getInt(1);
 				if (i != 0){
 					rs = st.executeQuery("SELECT * FROM shops WHERE world = '" + b.getBlock().getWorld().getName() + "' AND x = '" + b.getBlock().getX() + "' AND y = '" + b.getBlock().getY() + "' AND z = '" + b.getBlock().getZ() + "'");
+					int shopId = rs.getInt("id");
 					String admin = rs.getString("admin");
-					rs = st.executeQuery("SELECT * FROM shops WHERE world = '" + b.getBlock().getWorld().getName() + "' AND x = '" + b.getBlock().getX() + "' AND y = '" + b.getBlock().getY() + "' AND z = '" + b.getBlock().getZ() + "' AND creator = '" + b.getPlayer().getName() + "'");
+					rs = st.executeQuery("SELECT COUNT(*) FROM shops WHERE world = '" + b.getBlock().getWorld().getName() + "' AND x = '" + b.getBlock().getX() + "' AND y = '" + b.getBlock().getY() + "' AND z = '" + b.getBlock().getZ() + "' AND creator = '" + b.getPlayer().getName() + "'");
 					i = 0;
 					while (rs.next())
 						i = rs.getInt(1);
@@ -1303,6 +1324,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 						}
 						else {
 							st.executeUpdate("DELETE FROM shops WHERE world = '" + b.getBlock().getWorld().getName() + "' AND x ='" + b.getBlock().getX() + "' AND y = '" + b.getBlock().getY() + "' AND z = '" + b.getBlock().getZ() + "'");
+							st.executeUpdate("INSERT INTO shoplog (shop, player, action) VALUES ('" + shopId + "', '" + b.getPlayer().getName() + "', '3')");
 							b.getPlayer().sendMessage(ChatColor.DARK_PURPLE + "GoldShop successfully unregistered!");
 							if (admin.equalsIgnoreCase("false")){
 								Location chestLoc = new Location(b.getBlock().getWorld(), b.getBlock().getX(), (b.getBlock().getY() - 1), b.getBlock().getZ());
@@ -1317,6 +1339,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 						}
 						else {
 							st.executeUpdate("DELETE FROM shops WHERE world = '" + b.getBlock().getWorld().getName() + "' AND x ='" + b.getBlock().getX() + "' AND y = '" + b.getBlock().getY() + "' AND z = '" + b.getBlock().getZ() + "'");
+							st.executeUpdate("INSERT INTO shoplog (shop, player, action) VALUES ('" + shopId + "', '" + b.getPlayer().getName() + "', '3')");
 							b.getPlayer().sendMessage(ChatColor.DARK_PURPLE + "GoldShop successfully unregistered!");
 							if (admin.equalsIgnoreCase("false")){
 								Location chestLoc = new Location(b.getBlock().getWorld(), b.getBlock().getX(), (b.getBlock().getY() - 1), b.getBlock().getZ());
@@ -1410,7 +1433,9 @@ public class GoldBank extends JavaPlugin implements Listener {
 				while (rs.next())
 					i = rs.getInt(1);
 				if (i != 0){
-					rs = st.executeQuery("SELECT * FROM shops WHERE world = '" + adjBlock.getWorld().getName() + "' AND x = '" + adjBlock.getX() + "' AND y = '" + adjBlock.getY() + "' AND z = '" + adjBlock.getZ() + "' AND creator = '" + b.getPlayer().getName() + "'");
+					rs = st.executeQuery("SELECT * FROM shops WHERE world = '" + adjBlock.getWorld().getName() + "' AND x = '" + adjBlock.getX() + "' AND y = '" + adjBlock.getY() + "' AND z = '" + adjBlock.getZ() + "'");
+					int shopId = rs.getInt("id");
+					rs = st.executeQuery("SELECT COUNT(*) FROM shops WHERE world = '" + adjBlock.getWorld().getName() + "' AND x = '" + adjBlock.getX() + "' AND y = '" + adjBlock.getY() + "' AND z = '" + adjBlock.getZ() + "' AND creator = '" + b.getPlayer().getName() + "'");
 					i = 0;
 					while (rs.next())
 						i = rs.getInt(1);
@@ -1421,6 +1446,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 						}
 						else {
 							st.executeUpdate("DELETE FROM shops WHERE world = '" + adjBlock.getWorld().getName() + "' AND x ='" + adjBlock.getX() + "' AND y = '" + adjBlock.getY() + "' AND z = '" + adjBlock.getZ() + "'");
+							st.executeUpdate("INSERT INTO shoplog (shop, player, action) VALUES ('" + shopId + "', '" + b.getPlayer().getName() + "', '3')");
 							b.getPlayer().sendMessage(ChatColor.DARK_PURPLE + "GoldShop successfully unregistered!");
 							if (admin.equalsIgnoreCase("false")){
 								Location chestLoc = new Location(adjBlock.getWorld(), adjBlock.getX(), (adjBlock.getY() - 1), adjBlock.getZ());
@@ -1435,6 +1461,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 						}
 						else {
 							st.executeUpdate("DELETE FROM shops WHERE world = '" + adjBlock.getWorld().getName() + "' AND x ='" + adjBlock.getX() + "' AND y = '" + adjBlock.getY() + "' AND z = '" + adjBlock.getZ() + "'");
+							st.executeUpdate("INSERT INTO shoplog (shop, player, action) VALUES ('" + shopId + "', '" + b.getPlayer().getName() + "', '3')");
 							b.getPlayer().sendMessage(ChatColor.DARK_PURPLE + "GoldShop successfully unregistered!");
 							if (admin.equalsIgnoreCase("false")){
 								Location chestLoc = new Location(b.getBlock().getWorld(), b.getBlock().getX(), (b.getBlock().getY() - 1), b.getBlock().getZ());
@@ -2055,6 +2082,9 @@ public class GoldBank extends JavaPlugin implements Listener {
 															"', '" + sells[0] +
 															"', '" + sells[1] +
 															"', '" + admin + "')");
+													rs = st.executeQuery("SELECT * FROM shops WHERE world = '" + player.getWorld().getName() + "' AND x = '" + x + "' AND y = '" + y + "' AND z = '" + z + "'");
+													int shopId = rs.getInt("id");
+													st.executeUpdate("INSERT INTO shoplog (shop, player, action) VALUES ('" + shopId + "', '" + player.getName() + "', '2')");
 													int dataLength = 0;
 													if (dataNum != 0 && Material.getMaterial(matId) != Material.WOOL){
 														dataLength = Integer.toString(dataNum).length() + 1;
@@ -3004,6 +3034,46 @@ public class GoldBank extends JavaPlugin implements Listener {
 					}
 				}
 			}
+		}
+		if (getConfig().getBoolean("only-gold-in-wallets")){
+			if (((Player)e.getViewers().get(0)).getGameMode() != GameMode.CREATIVE){
+				if (e.getInventory().getType() == InventoryType.CHEST){
+					String p = ((Player)e.getViewers().get(0)).getName();
+					int index = -1;
+					for (int i = 0; i < openingPlayer.length; i++){
+						if (openingPlayer[i] != null){
+							if (openingPlayer[i].equals(p)){
+								index = i;
+								break;
+							}
+						}
+					}
+					if (index != -1){
+						if (openType[index].equals("wallet")){
+							if (!(e.getCursor().getType() == Material.GOLD_BLOCK || e.getCurrentItem().getType() == Material.GOLD_BLOCK) && 
+									!(e.getCursor().getType() == Material.GOLD_INGOT || e.getCurrentItem().getType() == Material.GOLD_INGOT) && 
+									!(e.getCursor().getType() == Material.GOLD_NUGGET || e.getCurrentItem().getType() == Material.GOLD_NUGGET)){
+								e.setCancelled(true);
+							}
+							log.info(e.getCursor().getType().toString());
+							log.info(e.getCurrentItem().getType().toString());
+							log.info(e.getInventory().getType().toString());
+						}
+					}
+				}
+			}
+		}
+		if (e.getCurrentItem().getType() == Material.BOOK || e.getCursor().getType() == Material.BOOK){
+			ItemStack is = null;
+			if (e.getCurrentItem().getType() == Material.BOOK){
+				is = e.getCurrentItem();
+			}
+			else if (e.getCurrentItem().getType() == Material.BOOK){
+				is = e.getCursor();
+			}
+			BookMeta meta = (BookMeta)is.getItemMeta();
+			if (meta.getDisplayName().equals("§2Wallet"))
+				e.setCancelled(true);
 		}
 	}
 
