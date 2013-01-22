@@ -223,7 +223,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 					"action INTEGER NOT NULL," +
 					"material INTEGER," +
 					"data INTEGER," +
-					"amount INTEGER)");
+					"quantity INTEGER)");
 		}
 		catch (Exception e){
 			e.printStackTrace();
@@ -269,10 +269,8 @@ public class GoldBank extends JavaPlugin implements Listener {
 	@SuppressWarnings("deprecation")
 	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onClick(PlayerInteractEvent e){
-		log.info("it fired");
 		boolean wallet = false;
 		if (e.getAction() == Action.RIGHT_CLICK_BLOCK || e.getAction() == Action.RIGHT_CLICK_AIR){
-			log.info("derp");
 			// check if wallet is in hand
 			if (e.getPlayer().getItemInHand().getType() == Material.BOOK){
 				// this code didn't work, as it caused a rare bug, so I resolved to just cancel the entire freaking event
@@ -642,7 +640,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 									if (count == 1){
 										if (enough == true){
 											if (notzero == true){
-												removeFromPlayerInv(player.getInventory(), Material.GOLD_NUGGET, atmfee, player);
+												removeFromPlayerInv(player, Material.GOLD_NUGGET, 0, atmfee);
 												player.sendMessage(ChatColor.DARK_PURPLE + "Charged " + atmfee + " golden nuggets");
 											}
 											else {
@@ -772,7 +770,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 															remove = blocks;
 														}
 														removeB = remove;
-														removeFromPlayerInv(inv, Material.GOLD_BLOCK, remove, player);
+														removeFromPlayerInv(player, Material.GOLD_BLOCK, 0, remove);
 														remaining = buyPrice - (remove / 9);
 													}
 													if (remaining >= 1 && getAmountInInv(inv, Material.GOLD_INGOT) >= 1){
@@ -783,16 +781,16 @@ public class GoldBank extends JavaPlugin implements Listener {
 														else {
 															remove = ingots;
 														}
-														removeFromPlayerInv(inv, Material.GOLD_INGOT, remove, player);
+														removeFromPlayerInv(player, Material.GOLD_INGOT, 0, remove);
 														remaining = remaining - remove;
 													}
 													else if (remaining >= 1){
-														removeFromPlayerInv(inv, Material.GOLD_BLOCK, 1, player);
+														removeFromPlayerInv(player, Material.GOLD_BLOCK, 0, 1);
 														inv.addItem(new ItemStack[] {
 																new ItemStack(Material.GOLD_INGOT, 9 - remaining)});
 													}
 													if (remaining >= 1){
-														removeFromPlayerInv(inv, Material.GOLD_NUGGET, remaining * 9, player);
+														removeFromPlayerInv(player, Material.GOLD_NUGGET, 0, remaining * 9);
 													}
 													inv.addItem(new ItemStack[] {buyIs});
 													player.updateInventory();
@@ -872,7 +870,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 											if (newTool){
 												Inventory inv = player.getInventory();
 												if (getAmountInInv(inv, mat) >= sellAmount){
-													removeFromPlayerInv(inv, sellIs.getType(), sellIs.getAmount(), player);
+													removeFromPlayerInv(player, sellIs.getType(), sellIs.getDurability(), sellIs.getAmount());
 													inv.addItem(new ItemStack[] {
 															new ItemStack(Material.GOLD_INGOT, sellPrice)});
 													player.updateInventory();
@@ -925,7 +923,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 																	remove = blocks;
 																}
 																removeB = remove;
-																removeFromPlayerInv(inv, Material.GOLD_BLOCK, remove, player);
+																removeFromPlayerInv(player, Material.GOLD_BLOCK, 0, remove);
 																remaining = buyPrice - (remove / 9);
 															}
 															if (remaining >= 1 && getAmountInInv(inv, Material.GOLD_INGOT) >= 1){
@@ -936,11 +934,11 @@ public class GoldBank extends JavaPlugin implements Listener {
 																else {
 																	remove = ingots;
 																}
-																removeFromPlayerInv(inv, Material.GOLD_INGOT, remove, player);
+																removeFromPlayerInv(player, Material.GOLD_INGOT, 0, remove);
 																remaining = remaining - remove;
 															}
 															else if (remaining >= 1){
-																removeFromPlayerInv(inv, Material.GOLD_BLOCK, 1, player);
+																removeFromPlayerInv(player, Material.GOLD_BLOCK, 0, 1);
 																if (removeB >= 1)
 																	inv.addItem(new ItemStack[] {
 																			new ItemStack(Material.GOLD_INGOT, 9 - removeB)});
@@ -949,9 +947,9 @@ public class GoldBank extends JavaPlugin implements Listener {
 																			new ItemStack(Material.GOLD_INGOT, 9 - remaining)});
 															}
 															if (remaining >= 1){
-																removeFromPlayerInv(inv, Material.GOLD_NUGGET, remaining * 9, player);
+																removeFromPlayerInv(player, Material.GOLD_NUGGET, 0, remaining * 9);
 															}
-															removeFromInv(chestInv, buyIs.getType(), buyIs.getAmount());
+															removeFromInv(chestInv, buyIs.getType(), 0, buyIs.getAmount());
 															int newBlocks = buyPrice / 9;
 															int blockRemainder = buyPrice - newBlocks * 9;
 															int newIngots = blockRemainder;
@@ -966,7 +964,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 															if (getAmountInInv(chestInv, Material.GOLD_INGOT) >= 9){
 																int extraIngots = getAmountInInv(chestInv, Material.GOLD_INGOT);
 																int blockNum = extraIngots / 9;
-																removeFromInv(chestInv, Material.GOLD_INGOT, blockNum * 9);
+																removeFromInv(chestInv, Material.GOLD_INGOT, 0, blockNum * 9);
 																chestInv.addItem(new ItemStack[] {
 																		new ItemStack(Material.GOLD_BLOCK, blockNum)});
 															}
@@ -1053,7 +1051,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 													if (getAmountInInv(inv, mat) >= sellAmount){
 														int chestTotal = ((getAmountInInv(chestInv, Material.GOLD_NUGGET)) + (getAmountInInv(chestInv, Material.GOLD_INGOT) * 9) + (getAmountInInv(chestInv, Material.GOLD_BLOCK) * 81)) / 9; 
 														if (chestTotal >= sellPrice){
-															removeFromPlayerInv(inv, sellIs.getType(), sellIs.getAmount(), player);
+															removeFromPlayerInv(player, sellIs.getType(), 0, sellIs.getAmount());
 															int remaining = sellPrice;
 															int removeB = 0;
 															int blocks = getAmountInInv(chestInv, Material.GOLD_BLOCK);
@@ -1068,7 +1066,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 																	remove = blocks;
 																}
 																removeB = remove;
-																removeFromInv(chestInv, Material.GOLD_BLOCK, remove);
+																removeFromInv(chestInv, Material.GOLD_BLOCK, 0, remove);
 																remaining = sellPrice - (remove / 9);
 															}
 															if (remaining >= 1 && ingots >= 1){
@@ -1079,16 +1077,16 @@ public class GoldBank extends JavaPlugin implements Listener {
 																else {
 																	remove = ingots;
 																}
-																removeFromInv(chestInv, Material.GOLD_INGOT, remove);
+																removeFromInv(chestInv, Material.GOLD_INGOT, 0, remove);
 																remaining = remaining - remove;
 															}
 															else if (remaining >= 1){
-																removeFromInv(chestInv, Material.GOLD_BLOCK, 1);
+																removeFromInv(chestInv, Material.GOLD_BLOCK, 0, 1);
 																chestInv.addItem(new ItemStack[] {
 																		new ItemStack(Material.GOLD_INGOT, 9 - remaining)});
 															}
 															if (remaining >= 1){
-																removeFromInv(chestInv, Material.GOLD_NUGGET, remaining * 9);
+																removeFromInv(chestInv, Material.GOLD_NUGGET, 0, remaining * 9);
 															}
 															inv.addItem(new ItemStack[] {
 																	new ItemStack(Material.GOLD_INGOT, sellPrice)});
@@ -3098,21 +3096,23 @@ public class GoldBank extends JavaPlugin implements Listener {
 		}
 	}
 
-	public void removeFromInv(Inventory inv, Material mat, int amount){
+	public void removeFromInv(Inventory inv, Material mat, int dmgValue, int amount){
 		if(inv.contains(mat)){
 			int remaining = amount;
 			ItemStack[] contents = inv.getContents();
 			for (ItemStack is : contents){
 				if (is != null){
 					if (is.getType() == mat){
-						if(is.getAmount() > remaining){
-							is.setAmount(is.getAmount() - remaining);
-							remaining = 0;
-						}
-						else if(is.getAmount() <= remaining){
-							if (remaining > 0){
-								remaining -= is.getAmount();
-								is.setType(Material.AIR);
+						if (is.getDurability() == dmgValue || dmgValue <= 0){
+							if(is.getAmount() > remaining){
+								is.setAmount(is.getAmount() - remaining);
+								remaining = 0;
+							}
+							else if(is.getAmount() <= remaining){
+								if (remaining > 0){
+									remaining -= is.getAmount();
+									is.setType(Material.AIR);
+								}
 							}
 						}
 					}
@@ -3123,8 +3123,8 @@ public class GoldBank extends JavaPlugin implements Listener {
 	}
 
 	@SuppressWarnings("deprecation")
-	public void removeFromPlayerInv(Inventory inv, Material mat, int amount, Player p){
-		removeFromInv(inv, mat, amount);
+	public void removeFromPlayerInv(Player p, Material mat, int dmgValue, int amount){
+		removeFromInv(p.getInventory(), mat, dmgValue, amount);
 		p.updateInventory();
 	}
 }
