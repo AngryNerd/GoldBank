@@ -1,5 +1,5 @@
 name: GoldBank
-version: 2.2.1
+version: 2.3
 main: net.amigocraft.GoldBank.GoldBank
 commands:
   gb:
@@ -9,9 +9,6 @@ commands:
     view:
       description: Opens the player's bank inventory if no additional arguments are given; opens a specified player's bank inventory otherwise
       usage: /gb view {player}
-  api:
-      description: Can I has API?
-      usage: /api
 permissions:
   goldbank.*:
     description: Contains all permissions
