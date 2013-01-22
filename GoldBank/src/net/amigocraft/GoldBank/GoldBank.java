@@ -240,15 +240,39 @@ public class GoldBank extends JavaPlugin implements Listener {
 		log.info(ANSI_GREEN + this + " has been enabled!" + ANSI_WHITE);
 	}
 	public void onDisable(){
+		log.info(ANSI_GREEN + "[GoldBank] " + ANSI_WHITE + "Please wait, purging variables...");
+		boolean first = true;
+		for (int i = 0; i < openingPlayer.length; i++){
+			if (openType[i] != null){
+				if (openType[i].equals("wallet")){
+					Player p = getServer().getPlayer(openingPlayer[i]);
+					if (p != null){
+						p.closeInventory();
+						p.sendMessage(ChatColor.RED + "Wallet automatically closed by reload");
+					}
+					openType[i] = null;
+					openingPlayer[i] = null;
+					openPlayer[i] = null;
+					openWalletNo = null;
+					if (first){
+						if (nextIndex > i)
+							nextIndex = i;
+						first = false;
+					}
+				}
+			}
+		}
 		log.info(ANSI_GREEN + this + " has been disabled!" + ANSI_WHITE);
 	}
 
 	// initiate function for detecting player clicking sign
 	@SuppressWarnings("deprecation")
-	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onClick(PlayerInteractEvent e){
+		log.info("it fired");
 		boolean wallet = false;
 		if (e.getAction() == Action.RIGHT_CLICK_BLOCK || e.getAction() == Action.RIGHT_CLICK_AIR){
+			log.info("derp");
 			// check if wallet is in hand
 			if (e.getPlayer().getItemInHand().getType() == Material.BOOK){
 				// this code didn't work, as it caused a rare bug, so I resolved to just cancel the entire freaking event
@@ -3035,45 +3059,42 @@ public class GoldBank extends JavaPlugin implements Listener {
 				}
 			}
 		}
-		if (getConfig().getBoolean("only-gold-in-wallets")){
-			if (((Player)e.getViewers().get(0)).getGameMode() != GameMode.CREATIVE){
-				if (e.getInventory().getType() == InventoryType.CHEST){
-					String p = ((Player)e.getViewers().get(0)).getName();
-					int index = -1;
-					for (int i = 0; i < openingPlayer.length; i++){
-						if (openingPlayer[i] != null){
-							if (openingPlayer[i].equals(p)){
-								index = i;
-								break;
-							}
+		if (((Player)e.getViewers().get(0)).getGameMode() != GameMode.CREATIVE){
+			if (e.getInventory().getType() == InventoryType.CHEST){
+				String p = ((Player)e.getViewers().get(0)).getName();
+				int index = -1;
+				for (int i = 0; i < openingPlayer.length; i++){
+					if (openingPlayer[i] != null){
+						if (openingPlayer[i].equals(p)){
+							index = i;
+							break;
 						}
 					}
-					if (index != -1){
-						if (openType[index].equals("wallet")){
+				}
+				if (index != -1){
+					if (openType[index].equals("wallet")){
+						if (getConfig().getBoolean("only-gold-in-wallets")){
 							if (!(e.getCursor().getType() == Material.GOLD_BLOCK || e.getCurrentItem().getType() == Material.GOLD_BLOCK) && 
 									!(e.getCursor().getType() == Material.GOLD_INGOT || e.getCurrentItem().getType() == Material.GOLD_INGOT) && 
 									!(e.getCursor().getType() == Material.GOLD_NUGGET || e.getCurrentItem().getType() == Material.GOLD_NUGGET)){
 								e.setCancelled(true);
 							}
-							log.info(e.getCursor().getType().toString());
-							log.info(e.getCurrentItem().getType().toString());
-							log.info(e.getInventory().getType().toString());
+						}
+						if (e.getCurrentItem().getType() == Material.BOOK || e.getCursor().getType() == Material.BOOK){
+							ItemStack is = null;
+							if (e.getCurrentItem().getType() == Material.BOOK){
+								is = e.getCurrentItem();
+							}
+							else if (e.getCurrentItem().getType() == Material.BOOK){
+								is = e.getCursor();
+							}
+							ItemMeta meta = is.getItemMeta();
+							if (meta.getDisplayName().equals("§2Wallet"))
+								e.setCancelled(true);
 						}
 					}
 				}
 			}
-		}
-		if (e.getCurrentItem().getType() == Material.BOOK || e.getCursor().getType() == Material.BOOK){
-			ItemStack is = null;
-			if (e.getCurrentItem().getType() == Material.BOOK){
-				is = e.getCurrentItem();
-			}
-			else if (e.getCurrentItem().getType() == Material.BOOK){
-				is = e.getCursor();
-			}
-			BookMeta meta = (BookMeta)is.getItemMeta();
-			if (meta.getDisplayName().equals("§2Wallet"))
-				e.setCancelled(true);
 		}
 	}
 
