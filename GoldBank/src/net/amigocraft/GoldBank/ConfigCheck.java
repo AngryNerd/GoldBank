@@ -2,8 +2,6 @@ package net.amigocraft.GoldBank;
 
 import java.io.File;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
 
 import org.bukkit.configuration.file.YamlConfiguration;
 
@@ -19,7 +17,7 @@ public class ConfigCheck {
 		}
 
 		// check if values are set
-		if (!plugin.getConfig().isSet("interest")){
+		/*if (!plugin.getConfig().isSet("interest")){
 			GoldBank.log.info(ANSI_RED + "[GoldBank] Config value \"interest\" not found. Automatically adding..." + ANSI_WHITE);
 			plugin.getConfig().set("interest", 0.03);
 			plugin.getConfig().options().header(header);
@@ -135,7 +133,7 @@ public class ConfigCheck {
 			plugin.getConfig().options().header(header);
 			plugin.getConfig().options().copyHeader(false);
 			plugin.saveConfig();
-		}
+		}*/
 		YamlConfiguration y = new YamlConfiguration();
 		try {
 			y.load(new File(plugin.getDataFolder() + File.separator + "config.yml"));
@@ -157,7 +155,7 @@ public class ConfigCheck {
 				}
 			}
 			else
-				GoldBank.log.info(ANSI_RED + "Error checking config values!" + ANSI_WHITE);
+				GoldBank.log.info(GoldBank.ANSI_GREEN + "[GoldBank] " + ANSI_RED + "Error checking config values!" + ANSI_WHITE);
 		}
 		catch (Exception e){
 			GoldBank.log.info(ANSI_RED + "Error checking config values!" + ANSI_WHITE);

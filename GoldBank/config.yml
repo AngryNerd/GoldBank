@@ -82,3 +82,11 @@ enable-auto-update: true
 
 #Allow the plugin to send usage statistics to MCStats (pretty please)?
 enable-metrics: true
+
+#Should players be barred from placing non-gold items in their wallets?
+only-gold-in-wallets: false
+
+#Define worlds to disable gold mob drops in here
+disable-drops-in:
+  - your_world
+  - your_second_world
