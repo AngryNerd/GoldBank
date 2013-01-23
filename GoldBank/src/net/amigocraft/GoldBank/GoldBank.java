@@ -2192,6 +2192,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 	}
 
 	// commands and stuff :D
+	@SuppressWarnings("deprecation")
 	public boolean onCommand(CommandSender sender, Command cmd, String commandLabel, String[] args){
 		if (commandLabel.equalsIgnoreCase("gb")){
 			if (args.length >= 1){
@@ -2203,122 +2204,175 @@ public class GoldBank extends JavaPlugin implements Listener {
 					if (sender instanceof Player)
 						sender.sendMessage(ChatColor.DARK_AQUA + "GoldBank has been reloaded!");
 				}
-				// view
-				else if (args[0].equalsIgnoreCase("view")){
-					if (sender instanceof Player){
-						if (args.length == 1 && sender.hasPermission("goldbank.view")){
-							String user = sender.getName();
-							File invF = new File(getDataFolder() + File.separator + "inventories", user + ".inv");
-							if(invF.exists()){
-								YamlConfiguration invY = new YamlConfiguration();
-								try {
-									invY.load(invF);
-									int size = invY.getInt("size");
-									Set<String> keys = invY.getKeys(false);
-									ItemStack[] invI = new ItemStack[size];
-									for (String invN : keys){
-										if (!invN.equalsIgnoreCase("size")){
-											int i = Integer.parseInt(invN);
-											invI[i] =  invY.getItemStack(invN);
+				// bank
+				else if (args[0].equalsIgnoreCase("bank")){
+					// view
+					if (args[0].equalsIgnoreCase("view")){
+						if (sender instanceof Player){
+							if (args.length == 1 && sender.hasPermission("goldbank.view")){
+								String user = sender.getName();
+								File invF = new File(getDataFolder() + File.separator + "inventories", user + ".inv");
+								if(invF.exists()){
+									YamlConfiguration invY = new YamlConfiguration();
+									try {
+										invY.load(invF);
+										int size = invY.getInt("size");
+										Set<String> keys = invY.getKeys(false);
+										ItemStack[] invI = new ItemStack[size];
+										for (String invN : keys){
+											if (!invN.equalsIgnoreCase("size")){
+												int i = Integer.parseInt(invN);
+												invI[i] =  invY.getItemStack(invN);
+											}
 										}
+										Inventory inv = this.getServer().createInventory(null, size, user + "'s GoldBank Sign");
+										inv.setContents(invI);
+										((Player)sender).openInventory(inv);
+										openPlayer[nextIndex] = user;
+										openingPlayer[nextIndex] = user;
+										openType[nextIndex] = "wallet";
+										nextIndex += 1;
 									}
-									Inventory inv = this.getServer().createInventory(null, size, user + "'s GoldBank Sign");
-									inv.setContents(invI);
-									((Player)sender).openInventory(inv);
-									openPlayer[nextIndex] = user;
-									openingPlayer[nextIndex] = user;
-									openType[nextIndex] = "wallet";
-									nextIndex += 1;
+									catch (Exception ex){
+										ex.printStackTrace();
+									}
 								}
-								catch (Exception ex){
-									ex.printStackTrace();
+								else
+									sender.sendMessage(ChatColor.RED + "Oh noes! You don't have a Bank inventory!");
+							}
+							else if (sender.hasPermission("goldbank.view.others")){
+								String user = args[1];
+								File invF = new File(getDataFolder() + File.separator + "inventories", user + ".inv");
+								if(invF.exists()){
+									YamlConfiguration invY = new YamlConfiguration();
+									try {
+										invY.load(invF);
+										int size = invY.getInt("size");
+										Set<String> keys = invY.getKeys(false);
+										ItemStack[] invI = new ItemStack[size];
+										for (String invN : keys){
+											if (!invN.equalsIgnoreCase("size")){
+												int i = Integer.parseInt(invN);
+												invI[i] =  invY.getItemStack(invN);
+											}
+										}
+										Inventory inv = this.getServer().createInventory(null, size, user + "'s GoldBank Sign");
+										inv.setContents(invI);
+										((Player)sender).openInventory(inv);
+										openPlayer[nextIndex] = user;
+										openingPlayer[nextIndex] = sender.getName();
+										openType[nextIndex] = "bank";
+										nextIndex += 1;
+									}
+									catch (Exception ex){
+										ex.printStackTrace();
+									}
 								}
+								else
+									sender.sendMessage(ChatColor.RED + "Oh noes! This player doesn't have a Bank inventory!");
 							}
 							else
-								sender.sendMessage(ChatColor.RED + "Oh noes! You don't have a Bank inventory!");
-						}
-						else if (sender.hasPermission("goldbank.view.others")){
-							String user = args[1];
-							File invF = new File(getDataFolder() + File.separator + "inventories", user + ".inv");
-							if(invF.exists()){
-								YamlConfiguration invY = new YamlConfiguration();
-								try {
-									invY.load(invF);
-									int size = invY.getInt("size");
-									Set<String> keys = invY.getKeys(false);
-									ItemStack[] invI = new ItemStack[size];
-									for (String invN : keys){
-										if (!invN.equalsIgnoreCase("size")){
-											int i = Integer.parseInt(invN);
-											invI[i] =  invY.getItemStack(invN);
-										}
-									}
-									Inventory inv = this.getServer().createInventory(null, size, user + "'s GoldBank Sign");
-									inv.setContents(invI);
-									((Player)sender).openInventory(inv);
-									openPlayer[nextIndex] = user;
-									openingPlayer[nextIndex] = sender.getName();
-									openType[nextIndex] = "bank";
-									nextIndex += 1;
-								}
-								catch (Exception ex){
-									ex.printStackTrace();
-								}
-							}
-							else
-								sender.sendMessage(ChatColor.RED + "Oh noes! This player doesn't have a Bank inventory!");
+								log.info(ChatColor.RED + "Oh noes! You don't have permission to do this!");
 						}
 						else
-							log.info(ChatColor.RED + "Oh noes! You don't have permission to do this!");
+							sender.sendMessage(ChatColor.RED + "You must be a player to use this command!");
 					}
 					else
-						sender.sendMessage("You must be a player to use this command!");
+						sender.sendMessage(ChatColor.RED + "Invalid argument! Usage: /gb bank [command]");
 				}
 				// wallet
 				else if (args[0].equalsIgnoreCase("wallet")){
 					if (sender instanceof Player){
-						if (args.length >= 3){
-							if (sender.hasPermission("goldbank.wallet.view")){
-								String user = args[1];
-								if (isInt(args[2])){
-									File invF = new File(getDataFolder() + File.separator + "wallets", user + ".inv");
-									if(invF.exists()){
-										YamlConfiguration invY = new YamlConfiguration();
-										try {
-											invY.load(invF);
-											if (invY.isSet(args[2])){
-												int size = invY.getInt(args[2] + ".size");
-												ItemStack[] invI = new ItemStack[size];
-												for (int i = 0; i < invI.length; i++){
-													if (!(args[2] + "." + i).equalsIgnoreCase("size")){
-														invI[i] =  invY.getItemStack(args[2] + "." + i);
+						if (args.length >= 4){
+							// view
+							if (args[1].equalsIgnoreCase("view")){
+								if (sender.hasPermission("goldbank.wallet.view")){
+									String user = args[2];
+									if (isInt(args[3])){
+										File invF = new File(getDataFolder() + File.separator + "wallets", user + ".inv");
+										if(invF.exists()){
+											YamlConfiguration invY = new YamlConfiguration();
+											try {
+												invY.load(invF);
+												if (invY.isSet(args[3])){
+													int size = invY.getInt(args[3] + ".size");
+													ItemStack[] invI = new ItemStack[size];
+													for (int i = 0; i < invI.length; i++){
+														if (!(args[3] + "." + i).equalsIgnoreCase("size")){
+															invI[i] =  invY.getItemStack(args[3] + "." + i);
+														}
 													}
+													Inventory inv = this.getServer().createInventory(null, size, user + "'s Wallet");
+													inv.setContents(invI);
+													((Player)sender).openInventory(inv);
+													openPlayer[nextIndex] = user;
+													openingPlayer[nextIndex] = sender.getName();
+													openType[nextIndex] = "wallet";
+													openWalletNo[nextIndex] = Integer.parseInt(args[2]);
+													nextIndex += 1;
 												}
-												Inventory inv = this.getServer().createInventory(null, size, user + "'s Wallet");
-												inv.setContents(invI);
-												((Player)sender).openInventory(inv);
-												openPlayer[nextIndex] = user;
-												openingPlayer[nextIndex] = sender.getName();
-												openType[nextIndex] = "wallet";
-												openWalletNo[nextIndex] = Integer.parseInt(args[2]);
-												nextIndex += 1;
+												else
+													sender.sendMessage(ChatColor.RED + "Error: The wallet specified does not exist!");
 											}
-											else
-												sender.sendMessage(ChatColor.RED + "Error: The wallet specified does not exist!");
+											catch (Exception ex){
+												ex.printStackTrace();
+											}
+										}
+										else
+											sender.sendMessage(ChatColor.RED + "Oh noes! This player doesnt have any wallets!");
+									}
+									else
+										sender.sendMessage(ChatColor.RED + "Error: Wallet number must be an integer!");
+								}
+							}
+							// spawn
+							else if (args[1].equalsIgnoreCase("spawn")){
+								if (sender.hasPermission("goldbank.wallet.spawn")){
+									if (isInt(args[3])){
+										ItemStack is = new ItemStack(Material.BOOK, 1);
+										ItemMeta meta = is.getItemMeta();
+										meta.setDisplayName("§2Wallet");
+										is.setItemMeta(meta);
+										try {
+											File invF = new File(getDataFolder() + File.separator + "wallets", args[2] + ".inv");
+											if (!invF.exists()){
+												invF.createNewFile();
+												sender.sendMessage(ChatColor.DARK_PURPLE + "Specified player does not yet have a wallets file. Attempting to create...");
+											}
+											YamlConfiguration invY = new YamlConfiguration();
+											invY.load(invF);
+											if (!invY.isSet(args[3])){
+												sender.sendMessage(ChatColor.DARK_PURPLE + "Specified wallet number does not yet exist. Attempting to create...");
+												invY.set(args[3] + ".size", this.getConfig().getInt("walletsize"));
+												invY.save(invF);
+											}
 										}
 										catch (Exception ex){
 											ex.printStackTrace();
+											sender.sendMessage(ChatColor.RED + "An error occurred while creating the wallet.");
 										}
+										meta = is.getItemMeta();
+										List<String> lore = new ArrayList<String>();
+										lore.add("Owned by");
+										lore.add(args[2]);
+										lore.add("§9Wallet #" + args[3]);
+										lore.add("§2GoldBank");
+										meta.setLore(lore);
+										is.setItemMeta(meta);
+										((Player)sender).getInventory().addItem(is);
+										((Player)sender).updateInventory();
 									}
 									else
-										sender.sendMessage(ChatColor.RED + "Oh noes! This player doesnt have any wallets!");
+										sender.sendMessage(ChatColor.RED + "Error: Wallet number must be an integer!");
 								}
 								else
-									sender.sendMessage(ChatColor.RED + "Error: Wallet number must be an integer!");
+									sender.sendMessage(ChatColor.RED + "Oh noes! You don't have permission to perform this command! :(");
 							}
+							else
+								sender.sendMessage(ChatColor.RED + "Invalid argument! Usage: /gb wallet [command]");
 						}
 						else
-							sender.sendMessage(ChatColor.RED + "You don;t have permisison to perform this command!");
+							sender.sendMessage(ChatColor.RED + "You don't have permisison to perform this command!");
 					}
 					else
 						sender.sendMessage(ChatColor.RED + "Error: You must be a player to use this command!");

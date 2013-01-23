@@ -6,33 +6,27 @@ commands:
     reload:
       description: Reloads the config.
       usage: /gb reload
-    view:
-      description: Opens the player's bank inventory if no additional arguments are given; opens a specified player's bank inventory otherwise
-      usage: /gb view {player}
+    bank:
+      view:
+        description: Opens the player's bank inventory if no additional arguments are given; opens a specified player's bank inventory otherwise
+        usage: /gb bank view {player}
+    wallet:
+      view:
+        description: Opens the given wallet of a given player
+        usage: /gb wallet view {player} {wallet no.}
+      spawn:
+        description: Adds the given wallet of a given player to the sender's inventory. Note that if the wallet does not yet have an associated YAML key, one will be created.
+        usage: /gb wallet spawn {player} {wallet no.}
 permissions:
   goldbank.*:
     description: Contains all permissions
     children:
-      goldbank.sign.bank.use: true
-      goldbank.sign.bank.use.others: true
-      goldbank.sign.bank.create: true
-      goldbank.sign.bank.destroy.others: true
-      goldbank.sign.bank.unclaim.others: true
-      goldbank.sign.bank.destroy.master: true
-      goldbank.sign.atm.use: true
-      goldbank.sign.atm.create: true
-      goldbank.sign.atm.destroy: true
       goldbank.fee.bank.exempt: true
       goldbank.fee.atm.exempt: true
       goldbank.reload: true
-      goldbank.sign.shop.use: true
-      goldbank.sign.shop.create.admin: true
-      goldbank.sign.shop.destroy.*: true
-      goldbank.sign.shop.access: true
+      goldbank.sign.*: true
       goldbank.view.others: true
-      goldbank.wallet.open: true
-      goldbank.wallet.view: true
-      goldbank.wallet.craft: true
+      goldbank.wallet.*: true
   goldbank.sign.*:
     description: Allows use and manipulation of all GoldBank signs
     children:
@@ -150,6 +144,7 @@ permissions:
       goldbank.wallet.craft: true
       goldbank.wallet.open: true
       goldbank.wallet.view: true
+      goldbank.wallet.spawn: true
   goldbank.wallet.craft:
     description: Allows crafting of GoldBank wallets
     default: true
@@ -164,3 +159,5 @@ permissions:
   goldbank.wallet.view:
     description: Allows viewing of all wallets by command
     default: op
+  goldbank.wallet.spawn:
+    description: Allows spawning of all wallets by command
