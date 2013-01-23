@@ -17,6 +17,10 @@ commands:
       spawn:
         description: Adds the given wallet of a given player to the sender's inventory. Note that if the wallet does not yet have an associated YAML key, one will be created.
         usage: /gb wallet spawn {player} {wallet no.}
+    shop:
+      log:
+        description: Allows a player to view a log of any shop's transactions, given they have the proper permissions
+        usage: /gb shop log
 permissions:
   goldbank.*:
     description: Contains all permissions
@@ -30,18 +34,9 @@ permissions:
   goldbank.sign.*:
     description: Allows use and manipulation of all GoldBank signs
     children:
-      goldbank.sign.bank.use: true
-      goldbank.sign.bank.use.others: true
-      goldbank.sign.bank.create: true
-      goldbank.sign.bank.unclaim.others: true
-      goldbank.sign.bank.destroy.master: true
-      goldbank.sign.atm.use: true
-      goldbank.sign.atm.create: true
-      goldbank.sign.atm.destroy: true
-      goldbank.sign.shop.use: true
-      goldbank.sign.shop.create.admin: true
-      goldbank.sign.shop.destroy.*: true
-      goldbank.sign.shop.access: true
+      goldbank.sign.bank.*: true
+      goldbank.sign.atm.*: true
+      goldbank.sign.shop.*: true
   goldbank.sign.bank.*:
     description: Allows use and manipulation of all [GoldBank] signs
     children:
@@ -65,6 +60,8 @@ permissions:
       goldbank.sign.shop.create.admin: true
       goldbank.sign.shop.destroy.*: true
       goldbank.sign.shop.access: true
+      goldbank.sign.shop.log: true
+      goldbank.sign.shop.log.others: true
   goldbank.sign.bank.use:
     description: Allows use of own [GoldBank] sign
     default: true
@@ -112,6 +109,14 @@ permissions:
   goldbank.sign.shop.access:
     description: Allows access to GoldShop chests of others
     default: op
+  goldbank.sign.shop.log:
+    description: Allows use of /gb shop log
+    default: true
+  goldbank.sign.shop.log.others:
+    description: Allows viewing of transactions of all GoldShops, including Admin shops
+    default: op
+    children:
+      goldbank.sign.shop.log: true
   goldbank.sign.atm.use:
     description: Allows use of [GoldATM] signs
     default: true

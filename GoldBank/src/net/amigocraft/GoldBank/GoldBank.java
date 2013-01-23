@@ -99,6 +99,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 	private String[] openType = new String[256];
 	private int[] openWalletNo = new int[256];
 	private int nextIndex = 0;
+	public List<String> shopLog = new ArrayList<String>();
 	public String header = "########################## #\n# GoldBank Configuration # #\n########################## #";
 
 	@Override
@@ -2275,7 +2276,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 								log.info(ChatColor.RED + "Oh noes! You don't have permission to do this!");
 						}
 						else
-							sender.sendMessage(ChatColor.RED + "You must be a player to use this command!");
+							sender.sendMessage(ChatColor.RED + "You must be an in-game player to perform this command!");
 					}
 					else
 						sender.sendMessage(ChatColor.RED + "Invalid argument! Usage: /gb bank [command]");
@@ -2375,17 +2376,32 @@ public class GoldBank extends JavaPlugin implements Listener {
 							sender.sendMessage(ChatColor.RED + "You don't have permisison to perform this command!");
 					}
 					else
-						sender.sendMessage(ChatColor.RED + "Error: You must be a player to use this command!");
+						sender.sendMessage(ChatColor.RED + "You must be an in-game player to perform this command!");
+				}
+				else if (args[0].equalsIgnoreCase("shop")){
+					if (args.length >= 2){
+						if (args[1].equalsIgnoreCase("log")){
+							if (sender instanceof Player){
+							if (sender.hasPermission("goldbank.sign.shop.log")){
+								if (!shopLog.contains(((Player)sender).getName()))
+									shopLog.add(((Player)sender).getName());
+								sender.sendMessage(ChatColor.DARK_PURPLE + "Click a GoldShop to view its history");
+							}
+							}
+							else
+								sender.sendMessage(ChatColor.RED + "You must be an in-game player to perform this command!");
+						}
+						else
+							sender.sendMessage(ChatColor.RED + "Invalid argument! Usage: /gb shop [command]");
+					}
+					else
+						sender.sendMessage(ChatColor.RED + "Too few arguments! Usage: /gb shop [command]");
 				}
 				else
 					sender.sendMessage(ChatColor.RED + "Invalid argument! Usage: /gb [command] [args]");
 			}
 			else if (args.length < 1)
 				sender.sendMessage(ChatColor.RED + "Too few arguments! Usage: /gb [command] [args]");
-			return true;
-		}
-		else if (commandLabel.equalsIgnoreCase("api")){
-			log.info(Boolean.toString(net.amigocraft.GoldBank.api.PlayerInv.addGoldToPlayerInv((Player)sender, 100)));
 			return true;
 		}
 		return false;
