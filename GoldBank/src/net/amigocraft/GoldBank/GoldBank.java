@@ -2497,8 +2497,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 							if (sender instanceof Player){
 								if (sender.hasPermission("goldbank.sign.shop.log")){
 									if (args.length == 2){
-										if (!shopLog.containsKey(((Player)sender).getName()))
-											shopLog.put(((Player)sender).getName(), 0);
+										shopLog.put(((Player)sender).getName(), 0);
 										sender.sendMessage(ChatColor.DARK_PURPLE + "Click a GoldShop to view its history");
 									}
 									else if (args[2].equalsIgnoreCase("page")){
