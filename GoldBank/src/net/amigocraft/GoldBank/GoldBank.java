@@ -19,6 +19,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -99,7 +100,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 	private String[] openType = new String[256];
 	private int[] openWalletNo = new int[256];
 	private int nextIndex = 0;
-	public List<String> shopLog = new ArrayList<String>();
+	public HashMap<String, Integer> shopLog = new HashMap<String, Integer>();
 	public String header = "########################## #\n# GoldBank Configuration # #\n########################## #";
 
 	@Override
@@ -224,7 +225,8 @@ public class GoldBank extends JavaPlugin implements Listener {
 					"action INTEGER NOT NULL," +
 					"material INTEGER," +
 					"data INTEGER," +
-					"quantity INTEGER)");
+					"quantity INTEGER," +
+					"time INTEGER)");
 		}
 		catch (Exception e){
 			e.printStackTrace();
@@ -267,12 +269,11 @@ public class GoldBank extends JavaPlugin implements Listener {
 	}
 
 	// initiate function for detecting player clicking sign
-	@SuppressWarnings("deprecation")
 	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onClick(PlayerInteractEvent e){
-		boolean wallet = false;
 		if (e.getAction() == Action.RIGHT_CLICK_BLOCK || e.getAction() == Action.RIGHT_CLICK_AIR){
 			// check if wallet is in hand
+			boolean wallet = false;
 			if (e.getPlayer().getItemInHand().getType() == Material.BOOK){
 				ItemStack is = e.getPlayer().getItemInHand();
 				ItemMeta meta = is.getItemMeta();
@@ -364,9 +365,121 @@ public class GoldBank extends JavaPlugin implements Listener {
 						}
 					}
 				}
-				//}
 			}
 		}
+		if (e.getAction() == Action.LEFT_CLICK_BLOCK || e.getAction() == Action.RIGHT_CLICK_BLOCK){
+			// check if player is checking shop
+			if (shopLog.containsKey(e.getPlayer().getName())){
+				if (shopLog.get(e.getPlayer().getName()) <= 0){
+					e.setCancelled(true);
+					shopLog.remove(e.getPlayer().getName());
+					if (e.getClickedBlock().getState() instanceof Sign){
+						Connection conn = null;
+						Statement st = null;
+						ResultSet rs = null;
+						try {
+							Class.forName("org.sqlite.JDBC");
+							String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "chestdata.db";
+							conn = DriverManager.getConnection(dbPath);
+							st = conn.createStatement();
+							String world = e.getClickedBlock().getWorld().getName();
+							int x = e.getClickedBlock().getX();
+							int y = e.getClickedBlock().getY();
+							int z = e.getClickedBlock().getZ();
+							rs = st.executeQuery("SELECT COUNT(*) FROM shops WHERE world = '" + world + "' AND x = '" + x + "' AND y = '" + y + "' AND z = '" + z + "'");
+							int count = 0;
+							while (rs.next()){
+								count = rs.getInt(1);
+							}
+							if (count != 0){
+								rs = st.executeQuery("SELECT * FROM shops WHERE world = '" + world + "' AND x = '" + x + "' AND y = '" + y + "' AND z = '" + z + "'");
+								int shopId = rs.getInt("id");
+								shopLog.put(e.getPlayer().getName(), shopId);
+								rs = st.executeQuery("SELECT COUNT(*) FROM shoplog WHERE shop = '" + shopId + "' AND action < '2'");
+								int total = 0;
+								while (rs.next()){
+									total = rs.getInt(1);
+								}
+								if (total != 0){
+									int perPage = 10;
+									int pages = total / perPage;
+									if (pages * perPage != total)
+										pages += 1;
+									e.getPlayer().sendMessage(ChatColor.DARK_PURPLE + "Page 1/" + pages);
+									rs = st.executeQuery("SELECT * FROM shoplog WHERE shop = '" + shopId + "' AND action < '2' ORDER BY id DESC");
+									for (int i = 1; i <= perPage; i++){
+										if (i <= total){
+											String action = "";
+											ChatColor actionColor = ChatColor.DARK_GREEN;
+											if (rs.getInt("action") == 0)
+												action = "bought";
+											else if (rs.getInt("action") == 1){
+												action = "sold";
+												actionColor = ChatColor.DARK_RED;
+											}
+											String data = "";
+											if (rs.getInt("data") > 0)
+												data = ":" + rs.getInt("data");
+											Calendar cal = Calendar.getInstance();
+											cal.setTimeInMillis((long)rs.getInt("time") * 1000);
+											String month = Integer.toString(cal.get(Calendar.MONTH) + 1);
+											String day = Integer.toString(cal.get(Calendar.DAY_OF_MONTH));
+											String hour = Integer.toString(cal.get(Calendar.HOUR_OF_DAY));
+											String min = Integer.toString(cal.get(Calendar.MINUTE));
+											String sec = Integer.toString(cal.get(Calendar.SECOND));
+											if (month.length() < 2)
+												month = "0" + month;
+											if (day.length() < 2)
+												day = "0" + day;
+											while (hour.length() < 2)
+												hour = "0" + hour;
+											while (min.length() < 2)
+												min = "0" + min;
+											while (sec.length() < 2)
+												sec = "0" + sec;
+											String dateStr = cal.get(Calendar.YEAR) + "-" + month + "-" + day + " " + hour + ":" + min + ":" + sec;
+											e.getPlayer().sendMessage(ChatColor.DARK_PURPLE + Integer.toString(i) + ") " + ChatColor.DARK_AQUA + dateStr + " " + ChatColor.LIGHT_PURPLE + rs.getString("player") + " " + actionColor + action + " " + ChatColor.GOLD + rs.getInt("quantity") + " " + Material.getMaterial(rs.getInt("material")).toString() + data);
+											rs.next();
+										}
+										else
+											break;
+									}
+									if (pages > 1)
+										e.getPlayer().sendMessage(ChatColor.DARK_PURPLE + "Type " + ChatColor.DARK_GREEN + "/gb shop log page 2 " + ChatColor.DARK_PURPLE + "to view the next page");
+								}
+								else
+									e.getPlayer().sendMessage(ChatColor.RED + "Error: The selected shop does not have any logged transactions!");
+							}
+							else {
+								e.getPlayer().sendMessage(ChatColor.RED + "Selected block is not a GoldShop! Operation aborted.");
+							}
+						}
+						catch (Exception ex){
+							ex.printStackTrace();
+						}
+						finally {
+							try {
+								conn.close();
+								st.close();
+								rs.close();
+							}
+							catch (Exception exc){
+								exc.printStackTrace();
+							}
+						}
+					}
+					else {
+						e.getPlayer().sendMessage(ChatColor.RED + "Selected block is not a GoldShop! Operation aborted.");
+					}
+				}
+			}
+		}
+	}
+
+	@SuppressWarnings("deprecation")
+	@EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
+	public void onOneClick(PlayerInteractEvent e){
+		boolean wallet = false;
 		// check for right click
 		if (e.getAction() == Action.RIGHT_CLICK_BLOCK){
 			if (!wallet){
@@ -798,7 +911,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 														}
 														inv.addItem(new ItemStack[] {buyIs});
 														player.updateInventory();
-														st.executeUpdate("INSERT INTO shoplog (shop, player, action, material, data, quantity) VALUES ('" + shopId + "', '" + player.getName() + "', '0', '" + mat.getId() + "', '" + dataValue + "', '" + buyIs.getAmount() + "')");
+														st.executeUpdate("INSERT INTO shoplog (shop, player, action, material, data, quantity, time) VALUES ('" + shopId + "', '" + player.getName() + "', '0', '" + mat.getId() + "', '" + dataValue + "', '" + buyIs.getAmount() + "', '" + System.currentTimeMillis() / 1000 + "')");
 														String buyPriceS = "s";
 														if (buyPrice == 1)
 															buyPriceS = "";
@@ -924,7 +1037,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 														inv.addItem(new ItemStack[] {
 																new ItemStack(Material.GOLD_INGOT, sellPrice)});
 														player.updateInventory();
-														st.executeUpdate("INSERT INTO shoplog (shop, player, action, material, data, quantity) VALUES ('" + shopId + "', '" + player.getName() + "', '1', '" + mat.getId() + "', '" + dataValue + "', '" + sellIs.getAmount() + "')");
+														st.executeUpdate("INSERT INTO shoplog (shop, player, action, material, data, quantity, time) VALUES ('" + shopId + "', '" + player.getName() + "', '1', '" + mat.getId() + "', '" + dataValue + "', '" + sellIs.getAmount() + "', '" + System.currentTimeMillis() / 1000 + "')");
 														String sellAmountS = "s";
 														if (sellAmount == 1)
 															sellAmountS = "";
@@ -1173,7 +1286,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 						}
 						else {
 							st.executeUpdate("DELETE FROM shops WHERE world = '" + b.getBlock().getWorld().getName() + "' AND x ='" + b.getBlock().getX() + "' AND y = '" + b.getBlock().getY() + "' AND z = '" + b.getBlock().getZ() + "'");
-							st.executeUpdate("INSERT INTO shoplog (shop, player, action) VALUES ('" + shopId + "', '" + b.getPlayer().getName() + "', '3')");
+							st.executeUpdate("INSERT INTO shoplog (shop, player, action, time) VALUES ('" + shopId + "', '" + b.getPlayer().getName() + "', '3', '" + System.currentTimeMillis() / 1000 + "')");
 							b.getPlayer().sendMessage(ChatColor.DARK_PURPLE + "GoldShop successfully unregistered!");
 							if (admin.equalsIgnoreCase("false")){
 								Location chestLoc = new Location(b.getBlock().getWorld(), b.getBlock().getX(), (b.getBlock().getY() - 1), b.getBlock().getZ());
@@ -1188,7 +1301,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 						}
 						else {
 							st.executeUpdate("DELETE FROM shops WHERE world = '" + b.getBlock().getWorld().getName() + "' AND x ='" + b.getBlock().getX() + "' AND y = '" + b.getBlock().getY() + "' AND z = '" + b.getBlock().getZ() + "'");
-							st.executeUpdate("INSERT INTO shoplog (shop, player, action) VALUES ('" + shopId + "', '" + b.getPlayer().getName() + "', '3')");
+							st.executeUpdate("INSERT INTO shoplog (shop, player, action, time) VALUES ('" + shopId + "', '" + b.getPlayer().getName() + "', '3', '" + System.currentTimeMillis() / 1000 + "')");
 							b.getPlayer().sendMessage(ChatColor.DARK_PURPLE + "GoldShop successfully unregistered!");
 							if (admin.equalsIgnoreCase("false")){
 								Location chestLoc = new Location(b.getBlock().getWorld(), b.getBlock().getX(), (b.getBlock().getY() - 1), b.getBlock().getZ());
@@ -1295,7 +1408,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 						}
 						else {
 							st.executeUpdate("DELETE FROM shops WHERE world = '" + adjBlock.getWorld().getName() + "' AND x ='" + adjBlock.getX() + "' AND y = '" + adjBlock.getY() + "' AND z = '" + adjBlock.getZ() + "'");
-							st.executeUpdate("INSERT INTO shoplog (shop, player, action) VALUES ('" + shopId + "', '" + b.getPlayer().getName() + "', '3')");
+							st.executeUpdate("INSERT INTO shoplog (shop, player, action, time) VALUES ('" + shopId + "', '" + b.getPlayer().getName() + "', '3', '" + System.currentTimeMillis() / 1000 + "')");
 							b.getPlayer().sendMessage(ChatColor.DARK_PURPLE + "GoldShop successfully unregistered!");
 							if (admin.equalsIgnoreCase("false")){
 								Location chestLoc = new Location(adjBlock.getWorld(), adjBlock.getX(), (adjBlock.getY() - 1), adjBlock.getZ());
@@ -1310,7 +1423,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 						}
 						else {
 							st.executeUpdate("DELETE FROM shops WHERE world = '" + adjBlock.getWorld().getName() + "' AND x ='" + adjBlock.getX() + "' AND y = '" + adjBlock.getY() + "' AND z = '" + adjBlock.getZ() + "'");
-							st.executeUpdate("INSERT INTO shoplog (shop, player, action) VALUES ('" + shopId + "', '" + b.getPlayer().getName() + "', '3')");
+							st.executeUpdate("INSERT INTO shoplog (shop, player, action, time) VALUES ('" + shopId + "', '" + b.getPlayer().getName() + "', '3', '" + System.currentTimeMillis() / 1000 + "')");
 							b.getPlayer().sendMessage(ChatColor.DARK_PURPLE + "GoldShop successfully unregistered!");
 							if (admin.equalsIgnoreCase("false")){
 								Location chestLoc = new Location(b.getBlock().getWorld(), b.getBlock().getX(), (b.getBlock().getY() - 1), b.getBlock().getZ());
@@ -1943,7 +2056,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 												"', '" + admin + "')");
 										rs = st.executeQuery("SELECT * FROM shops WHERE world = '" + player.getWorld().getName() + "' AND x = '" + x + "' AND y = '" + y + "' AND z = '" + z + "'");
 										int shopId = rs.getInt("id");
-										st.executeUpdate("INSERT INTO shoplog (shop, player, action) VALUES ('" + shopId + "', '" + player.getName() + "', '2')");
+										st.executeUpdate("INSERT INTO shoplog (shop, player, action, time) VALUES ('" + shopId + "', '" + player.getName() + "', '2', '" + System.currentTimeMillis() / 1000 + "')");
 										int dataLength = 0;
 										if (dataNum != 0 && Material.getMaterial(matId) != Material.WOOL){
 											dataLength = Integer.toString(dataNum).length() + 1;
@@ -2382,11 +2495,117 @@ public class GoldBank extends JavaPlugin implements Listener {
 					if (args.length >= 2){
 						if (args[1].equalsIgnoreCase("log")){
 							if (sender instanceof Player){
-							if (sender.hasPermission("goldbank.sign.shop.log")){
-								if (!shopLog.contains(((Player)sender).getName()))
-									shopLog.add(((Player)sender).getName());
-								sender.sendMessage(ChatColor.DARK_PURPLE + "Click a GoldShop to view its history");
-							}
+								if (sender.hasPermission("goldbank.sign.shop.log")){
+									if (args.length == 2){
+										if (!shopLog.containsKey(((Player)sender).getName()))
+											shopLog.put(((Player)sender).getName(), 0);
+										sender.sendMessage(ChatColor.DARK_PURPLE + "Click a GoldShop to view its history");
+									}
+									else if (args[2].equalsIgnoreCase("page")){
+										if (args.length >= 4){
+											if (isInt(args[3])){
+												if (shopLog.containsKey(sender.getName())){
+													if (shopLog.get(sender.getName()) > 0){
+														int shopId = shopLog.get(sender.getName());
+														Connection conn = null;
+														Statement st = null;
+														ResultSet rs = null;
+														try {
+															Class.forName("org.sqlite.JDBC");
+															String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "chestdata.db";
+															conn = DriverManager.getConnection(dbPath);
+															st = conn.createStatement();
+															int count = 0;
+															shopLog.put(sender.getName(), shopId);
+															rs = st.executeQuery("SELECT COUNT(*) FROM shoplog WHERE shop = '" + shopId + "' AND action < '2'");
+															int total = 0;
+															while (rs.next()){
+																total = rs.getInt(1);
+															}
+															if (total != 0){
+																int perPage = 10;
+																int pages = total / perPage;
+																if (pages * perPage != total)
+																	pages += 1;
+																if (pages >= Integer.parseInt(args[3])){
+																	int thisPage = total - ((Integer.parseInt(args[3]) - 1) * perPage);
+																	sender.sendMessage(ChatColor.DARK_PURPLE + "Page " + args[3] + "/" + pages);
+																	rs = st.executeQuery("SELECT * FROM shoplog WHERE shop = '" + shopId + "' AND action < '2' ORDER BY id DESC");
+																	for (int i = 1; i <= (Integer.parseInt(args[3]) - 1) * perPage; i++)
+																		rs.next();
+																	for (int i = 1; i <= perPage; i++){
+																		if (i <= thisPage){
+																			String action = "";
+																			ChatColor actionColor = ChatColor.DARK_GREEN;
+																			if (rs.getInt("action") == 0)
+																				action = "bought";
+																			else if (rs.getInt("action") == 1){
+																				action = "sold";
+																				actionColor = ChatColor.DARK_RED;
+																			}
+																			String data = "";
+																			if (rs.getInt("data") > 0)
+																				data = ":" + rs.getInt("data");
+																			Calendar cal = Calendar.getInstance();
+																			cal.setTimeInMillis((long)rs.getInt("time") * 1000);
+																			String month = Integer.toString(cal.get(Calendar.MONTH) + 1);
+																			String day = Integer.toString(cal.get(Calendar.DAY_OF_MONTH));
+																			String hour = Integer.toString(cal.get(Calendar.HOUR_OF_DAY));
+																			String min = Integer.toString(cal.get(Calendar.MINUTE));
+																			String sec = Integer.toString(cal.get(Calendar.SECOND));
+																			if (month.length() < 2)
+																				month = "0" + month;
+																			if (day.length() < 2)
+																				day = "0" + day;
+																			while (hour.length() < 2)
+																				hour = "0" + hour;
+																			while (min.length() < 2)
+																				min = "0" + min;
+																			while (sec.length() < 2)
+																				sec = "0" + sec;
+																			String dateStr = cal.get(Calendar.YEAR) + "-" + month + "-" + day + " " + hour + ":" + min + ":" + sec;
+																			sender.sendMessage(ChatColor.DARK_PURPLE + Integer.toString(i + ((Integer.parseInt(args[3]) - 1) * perPage)) + ") " + ChatColor.DARK_AQUA + dateStr + " " + ChatColor.LIGHT_PURPLE + rs.getString("player") + " " + actionColor + action + " " + ChatColor.GOLD + rs.getInt("quantity") + " " + Material.getMaterial(rs.getInt("material")).toString() + data);
+																			rs.next();
+																		}
+																		else
+																			break;
+																	}
+																	if (Integer.parseInt(args[3]) < pages)
+																		sender.sendMessage(ChatColor.DARK_PURPLE + "Type " + ChatColor.DARK_GREEN + "/gb shop log page " + (Integer.parseInt(args[3]) + 1) + ChatColor.DARK_PURPLE + " to view the next page");
+																}
+																else
+																	sender.sendMessage(ChatColor.RED + "Invalid page number!");
+															}
+															else
+																sender.sendMessage(ChatColor.RED + "Error: The selected shop does not have any logged transactions!");
+														}
+														catch (Exception ex){
+															ex.printStackTrace();
+														}
+														finally {
+															try {
+																conn.close();
+																st.close();
+																rs.close();
+															}
+															catch (Exception exc){
+																exc.printStackTrace();
+															}
+														}
+													}
+													else
+														sender.sendMessage(ChatColor.RED + "Please select a shop first!");
+												}
+												else
+													sender.sendMessage(ChatColor.RED + "Please select a shop first!");
+											}
+											else
+												sender.sendMessage(ChatColor.RED + "Page number must be an integer!");
+										}
+									}
+									else
+										sender.sendMessage(ChatColor.RED + "Invalid arguments! Usage: /gb shop log [page]");
+								}
 							}
 							else
 								sender.sendMessage(ChatColor.RED + "You must be an in-game player to perform this command!");
