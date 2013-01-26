@@ -3174,7 +3174,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 		}
 	}
 
-	public void removeFromInv(Inventory inv, Material mat, int dmgValue, int amount){
+	public static void removeFromInv(Inventory inv, Material mat, int dmgValue, int amount){
 		if(inv.contains(mat)){
 			int remaining = amount;
 			ItemStack[] contents = inv.getContents();
@@ -3201,7 +3201,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 	}
 
 	@SuppressWarnings("deprecation")
-	public void removeFromPlayerInv(Player p, Material mat, int dmgValue, int amount){
+	public static void removeFromPlayerInv(Player p, Material mat, int dmgValue, int amount){
 		removeFromInv(p.getInventory(), mat, dmgValue, amount);
 		p.updateInventory();
 	}

@@ -89,24 +89,35 @@ public class BankInv {
 				int ingot = 0;
 				int nugget = 0;
 				int remaining = amount;
-				if (GoldBank.getAmountInInv(inv, Material.GOLD_BLOCK) >= (amount / 81) && amount / 81 >= 1){
-					block = amount / 81;
-					block = block * 81;
-					remaining = amount - block;
+				if (remaining / 81 >= 1){
+					block = remaining / 81;
+					remaining -= block * 81;
 				}
-				if (GoldBank.getAmountInInv(inv, Material.GOLD_INGOT) >= (amount / 9) && remaining >= 9){
-					ingot = amount / 9;
-					ingot = ingot * 9;
-					remaining = remaining - ingot;
+				if (remaining >= 9){
+					ingot = remaining / 9;
+					remaining -= ingot * 9;
 				}
 				if (remaining != 0){
 					nugget = remaining;
 				}
-				HashMap<Integer, ItemStack> unfitBlock = newInv.addItem(new ItemStack(Material.GOLD_BLOCK, block));
-				HashMap<Integer, ItemStack> unfitIngot = newInv.addItem(new ItemStack(Material.GOLD_INGOT, ingot));
-				HashMap<Integer, ItemStack> unfitNugget = newInv.addItem(new ItemStack(Material.GOLD_NUGGET, nugget));
-				if (unfitBlock.isEmpty() && unfitIngot.isEmpty() && unfitNugget.isEmpty())
+				HashMap<Integer, ItemStack> unfitBlock = new HashMap<Integer, ItemStack>();
+				HashMap<Integer, ItemStack> unfitIngot = new HashMap<Integer, ItemStack>();
+				HashMap<Integer, ItemStack> unfitNugget = new HashMap<Integer, ItemStack>();
+				if (block > 0)
+					unfitBlock = newInv.addItem(new ItemStack(Material.GOLD_BLOCK, block));
+				if (ingot > 0)
+					unfitIngot = newInv.addItem(new ItemStack(Material.GOLD_INGOT, ingot));
+				if (nugget > 0)
+					unfitNugget = newInv.addItem(new ItemStack(Material.GOLD_NUGGET, nugget));
+				if (unfitBlock.isEmpty() && unfitIngot.isEmpty() && unfitNugget.isEmpty()){
+					if (block > 0)
+						inv.addItem(new ItemStack(Material.GOLD_BLOCK, block));
+					if (ingot > 0)
+						inv.addItem(new ItemStack(Material.GOLD_INGOT, ingot));
+					if (nugget > 0)
+						inv.addItem(new ItemStack(Material.GOLD_NUGGET, nugget));
 					return true;
+				}
 				else
 					return false;
 			}
@@ -144,24 +155,55 @@ public class BankInv {
 					}
 					Inventory inv = plugin.getServer().createInventory(null, size);
 					inv.setContents(invI);
-					int removedBlock = 0;
-					int removedIngot = 0;
-					int remaining = total;
-					if (GoldBank.getAmountInInv(inv, Material.GOLD_BLOCK) >= (amount / 81) && amount / 81 >= 1){
-						inv.remove(new ItemStack(Material.GOLD_BLOCK, amount / 81));
-						removedBlock = amount / 81;
-						removedBlock = removedBlock * 81;
-						remaining = total - removedBlock;
+					int remaining = amount;
+					// remove blocks
+					int blocks = GoldBank.getAmountInInv(inv, Material.GOLD_BLOCK);
+					if (blocks > 0 && remaining / 81 > 0){
+						if (blocks >= remaining / 81){
+							GoldBank.removeFromInv(inv, Material.GOLD_BLOCK, 0, remaining / 81);
+							remaining -= (remaining / 81) * 81;
+							if (GoldBank.getAmountInInv(inv, Material.GOLD_BLOCK) > 0 && remaining > 0){
+								GoldBank.removeFromInv(inv, Material.GOLD_BLOCK, 0, 1);
+								addGoldToBankInv(p, 81 - remaining);
+								remaining = 0;
+							}
+						}
+						else {
+							GoldBank.removeFromInv(inv, Material.GOLD_BLOCK, 0, blocks);
+							remaining -= blocks * 81;
+						}
 					}
-					if (GoldBank.getAmountInInv(inv, Material.GOLD_INGOT) >= (amount / 9) && remaining >= 9){
-						inv.remove(new ItemStack(Material.GOLD_NUGGET, amount / 9));
-						removedIngot = amount / 9;
-						removedIngot = removedIngot * 9;
-						remaining = remaining - removedIngot;
+					// remove ingots
+					int ingots = GoldBank.getAmountInInv(inv, Material.GOLD_INGOT);
+					if (ingots > 0 && remaining / 9 > 0){
+						if (ingots >= remaining / 9){
+							GoldBank.removeFromInv(inv, Material.GOLD_INGOT, 0, remaining / 9);
+							if (GoldBank.getAmountInInv(inv, Material.GOLD_INGOT) > 0 && remaining > 0){
+								GoldBank.removeFromInv(inv, Material.GOLD_INGOT, 0, 1);
+								addGoldToBankInv(p, 9 - remaining);
+								remaining = 0;
+							}
+						}
+						else {
+							GoldBank.removeFromInv(inv, Material.GOLD_INGOT, 0, ingots);
+							remaining -= ingots * 9;
+						}
 					}
-					if (remaining != 0){
-						if (GoldBank.getAmountInInv(inv, Material.GOLD_NUGGET) >= remaining)
-							inv.remove(new ItemStack(Material.GOLD_NUGGET, remaining));
+					// remove nuggets
+					int nuggets = GoldBank.getAmountInInv(inv, Material.GOLD_NUGGET);
+					if (nuggets > 0 && remaining > 0){
+						if (nuggets > remaining){
+							GoldBank.removeFromInv(inv, Material.GOLD_NUGGET, 0, remaining);
+							remaining = 0;
+						}
+						else {
+							// I don't think this is possible, but just in case ;)
+							GoldBank.removeFromInv(inv, Material.GOLD_NUGGET, 0, nuggets);
+							remaining -= nuggets;
+						}
+					}
+					for (int i = 0; i < inv.getSize(); i++){
+						invY.set(Integer.toString(i), inv.getItem(i));
 					}
 					return true;
 				}
