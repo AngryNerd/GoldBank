@@ -15,9 +15,10 @@ public class WalletInv {
 	static GoldBank plugin = GoldBank.plugin;
 
 	/**
-	 * Attempts to get the amount of gold in a specified player's ban inventory.
-	 * @param p The player who's bank inventory's gold should be counted.
-	 * @return The amount of gold (in nuggets) contained by the specified player's bank inventory. Note: this method will return -1 if the player's given wallet inventory cannot be loaded.
+	 * Attempts to get the amount of gold in a specified player's given wallet inventory.
+	 * @param p The player who's wallet's inventory should be searched.
+	 * @param walletIndex The wallet number to search
+	 * @return The amount of gold (in nuggets) contained by the specified player's given wallet inventory. Note: this method will return -1 if the player's given wallet inventory cannot be loaded.
 	 */
 	public static int getGoldInWalletInv(String p, int walletIndex){
 		File invf = new File(GoldBank.plugin.getDataFolder() + File.separator + "wallets", p + ".inv");
@@ -58,10 +59,10 @@ public class WalletInv {
 	}
 
 	/**
-	 * Attempts to add a specific amount of gold (defined in nuggets) to a player's bank inventory.
-	 * @param p The player whose bank inventory should be modified.
-	 * @param amount The amount of gold (in nuggets) to be added to the player's bank inventory.
-	 * @param simplify Whether or not the gold should be simplified (into blocks and ingots) before being distributed as nuggets
+	 * Attempts to add a specific amount of gold (defined in nuggets) to a player's given wallet inventory.
+	 * @param p The player whose wallet inventory should be modified.
+	 * @param walletIndex The wallet number to be modified.
+	 * @param amount The amount of gold (in nuggets) to be added to the player's given wallet inventory.
 	 * @return Whether or not the gold was successfully added (returns false if not enough space is available or the player's given wallet inventory could not be loaded).
 	 */
 	public static boolean addGoldToWalletInv(String p, int walletIndex, int amount){
@@ -125,9 +126,10 @@ public class WalletInv {
 	}
 
 	/**
-	 * Attempts to remove a specific amount of gold (defined in nuggets) from a player's inventory.
-	 * @param p The username of the player who's bank inventory should be modified.
-	 * @param amount The amount of gold (in nuggets) to be removed the player's bank inventory.
+	 * Attempts to remove a specific amount of gold (defined in nuggets) from a player's given wallet inventory.
+	 * @param p The username of the player who's wallet inventory should be modified.
+	 * @param walletIndex The wallet number to be modifed.
+	 * @param amount The amount of gold (in nuggets) to be removed the player's given wallet inventory.
 	 * @return Whether or not the gold was successfully added (returns false if not enough gold is contained by the player's given wallet inventory, or if the inventory cannot be loaded)
 	 */
 	public static boolean removeGoldFromWalletInv(String p, int walletIndex, int amount){

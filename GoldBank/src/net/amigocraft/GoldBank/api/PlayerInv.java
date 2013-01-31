@@ -37,7 +37,6 @@ public class PlayerInv extends JavaPlugin {
 	 * Attempts to add a specific amount of gold (defined in nuggets) to a player's inventory.
 	 * @param p The player whose inventory should be modified
 	 * @param amount The amount of gold (in nuggets) to be added to the player's inventory.
-	 * @param simplify Whether or not the gold should be simplified (into blocks and ingots) before being distributed as nuggets
 	 * @return Whether or not the gold was successfully added (returns false if not enough space is available)
 	 */
 	@SuppressWarnings("deprecation")
