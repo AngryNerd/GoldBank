@@ -861,179 +861,36 @@ public class GoldBank extends JavaPlugin implements Listener {
 											// buy
 											if (player.getItemInHand().getType() == Material.GOLD_BLOCK || player.getItemInHand().getType() == Material.GOLD_INGOT || player.getItemInHand().getType() == Material.GOLD_NUGGET){
 												e.setCancelled(true);
-												boolean enough = true;
-												if (chestInv != null)
-													if ((getAmountInInv(chestInv, mat, dataValue) < buyAmount && !admin) || admin)
-														enough = false;
-												if (enough){
-													Inventory inv = player.getInventory();
-													int blocks = getAmountInInv(inv, Material.GOLD_BLOCK, -1);
-													int ingots = getAmountInInv(inv, Material.GOLD_INGOT, -1);
-													int nuggets = getAmountInInv(inv, Material.GOLD_NUGGET, -1);
-													int totalblocks = (blocks * 81);
-													int totalingots = (ingots * 9);
-													int total = totalblocks + totalingots + nuggets;
-													total = total / 9;
-													if (total >= buyPrice){
-														if (getNullsInInv(inv) >= (buyAmount / 64) + 1){
-															int remaining = buyPrice;
-															int removeB = 0;
-															if (buyPrice >= 9 && getAmountInInv(inv, Material.GOLD_BLOCK, -1) >= 1){
-																int remove = 0;
-																if (blocks >= remaining / 9){
-																	remove = buyPrice / 9;
-																}
-																else
-																	remove = blocks;
-																removeB = remove;
-																removeFromPlayerInv(player, Material.GOLD_BLOCK, 0, remove);
-																remaining = buyPrice - (remove / 9);
-															}
-															if (remaining >= 1 && getAmountInInv(inv, Material.GOLD_INGOT, -1) >= 1){
-																int remove = 0;
-																if (ingots >= remaining){
-																	remove = remaining;
-																}
-																else {
-																	remove = ingots;
-																}
-																removeFromPlayerInv(player, Material.GOLD_INGOT, 0, remove);
-																remaining = remaining - remove;
-															}
-															else if (remaining >= 1){
-																removeFromPlayerInv(player, Material.GOLD_BLOCK, 0, 1);
-																inv.addItem(new ItemStack[] {
-																		new ItemStack(Material.GOLD_INGOT, 9 - remaining)});
-															}
-															if (remaining >= 1){
-																removeFromPlayerInv(player, Material.GOLD_NUGGET, 0, remaining * 9);
-															}
-															if (!admin){
-																removeFromInv(chestInv, buyIs.getType(), 0, buyIs.getAmount());
-																int newBlocks = buyPrice / 9;
-																int blockRemainder = buyPrice - newBlocks * 9;
-																int newIngots = blockRemainder;
-																ItemStack addBlocks = new ItemStack(Material.GOLD_BLOCK, newBlocks);
-																ItemStack addIngots = new ItemStack(Material.GOLD_INGOT, newIngots);
-																if (addBlocks.getAmount() != 0)
-																	chestInv.addItem(new ItemStack[] {
-																			addBlocks});
-																if (addIngots.getAmount() != 0)
-																	chestInv.addItem(new ItemStack[] {
-																			addIngots});
-																if (getAmountInInv(chestInv, Material.GOLD_INGOT, -1) >= 9){
-																	int extraIngots = getAmountInInv(chestInv, Material.GOLD_INGOT, -1);
-																	int blockNum = extraIngots / 9;
-																	removeFromInv(chestInv, Material.GOLD_INGOT, 0, blockNum * 9);
-																	chestInv.addItem(new ItemStack[] {
-																			new ItemStack(Material.GOLD_BLOCK, blockNum)});
-																}
-															}
-															inv.addItem(new ItemStack[] {buyIs});
-															player.updateInventory();
-															st.executeUpdate("INSERT INTO shoplog (shop, player, action, material, data, quantity, time) VALUES ('" + shopId + "', '" + player.getName() + "', '0', '" + mat.getId() + "', '" + dataValue + "', '" + buyIs.getAmount() + "', '" + System.currentTimeMillis() / 1000 + "')");
-															String buyPriceS = "s";
-															if (buyPrice == 1)
-																buyPriceS = "";
-															player.sendMessage(ChatColor.DARK_PURPLE + "You bought " + buyAmount + " " + forMatName + " for " + buyPrice + " golden ingot" + buyPriceS + "!");
-														}
-														else
-															player.sendMessage(ChatColor.RED + "Oh noes! You don't have enough open slots in your inventory!");
-													}
-													else
-														player.sendMessage(ChatColor.RED + "Oh noes! You don't have enough gold to buy that!");
-												}
-												else
-													player.sendMessage(ChatColor.RED + "Error: The associated chest does not have enough " + forMatName + "!");
-											}
-											// sell
-											else if (player.getItemInHand().getType() == mat){
-												e.setCancelled(true);
-												Material[] tools = new Material[]{
-														Material.DIAMOND_PICKAXE,
-														Material.DIAMOND_SWORD,
-														Material.DIAMOND_SPADE,
-														Material.DIAMOND_AXE,
-														Material.DIAMOND_HOE,
-														Material.DIAMOND_HELMET,
-														Material.DIAMOND_CHESTPLATE,
-														Material.DIAMOND_LEGGINGS,
-														Material.DIAMOND_BOOTS,
-														Material.IRON_PICKAXE,
-														Material.IRON_SWORD,
-														Material.IRON_SPADE,
-														Material.IRON_AXE,
-														Material.IRON_HOE,
-														Material.IRON_HELMET,
-														Material.IRON_CHESTPLATE,
-														Material.IRON_LEGGINGS,
-														Material.IRON_BOOTS,
-														Material.GOLD_PICKAXE,
-														Material.GOLD_SWORD,
-														Material.GOLD_SPADE,
-														Material.GOLD_AXE,
-														Material.GOLD_HOE,
-														Material.GOLD_HELMET,
-														Material.GOLD_CHESTPLATE,
-														Material.GOLD_LEGGINGS,
-														Material.GOLD_BOOTS,
-														Material.STONE_PICKAXE,
-														Material.STONE_SWORD,
-														Material.STONE_SPADE,
-														Material.STONE_AXE,
-														Material.STONE_HOE,
-														Material.CHAINMAIL_HELMET,
-														Material.CHAINMAIL_CHESTPLATE,
-														Material.CHAINMAIL_LEGGINGS,
-														Material.CHAINMAIL_BOOTS,
-														Material.WOOD_PICKAXE,
-														Material.WOOD_SWORD,
-														Material.WOOD_SPADE,
-														Material.WOOD_AXE,
-														Material.WOOD_HOE,
-														Material.LEATHER_HELMET,
-														Material.LEATHER_CHESTPLATE,
-														Material.LEATHER_LEGGINGS,
-														Material.LEATHER_BOOTS,
-														Material.FLINT_AND_STEEL,
-														Material.SHEARS,
-														Material.BOW,
-														Material.FISHING_ROD,
-														Material.ANVIL};
-												boolean newTool = true;
-												if (Arrays.asList(tools).contains(mat) && getConfig().getBoolean("selldamageditems") == false){
-													if (player.getItemInHand().getDurability() != 0){
-														newTool = false;
-													}
-												}
-												if (newTool){ 
-													boolean validSell = true;
-													if (!admin)
-														if (((getAmountInInv(chestInv, Material.GOLD_NUGGET, -1)) + (getAmountInInv(chestInv, Material.GOLD_INGOT, -1) * 9) + (getAmountInInv(chestInv, Material.GOLD_BLOCK, -1) * 81)) / 9 < sellPrice)
-															validSell = false;
-													if (validSell){
+												if (buyPrice == -1 && buyAmount == -1){
+													boolean enough = true;
+													if (chestInv != null)
+														if ((getAmountInInv(chestInv, mat, dataValue) < buyAmount && !admin) || admin)
+															enough = false;
+													if (enough){
 														Inventory inv = player.getInventory();
-														if (getAmountInInv(inv, mat, dataValue) >= sellAmount){
-															removeFromPlayerInv(player, sellIs.getType(), sellIs.getDurability(), sellIs.getAmount());
-															if (!admin){
-																int remaining = sellPrice;
+														int blocks = getAmountInInv(inv, Material.GOLD_BLOCK, -1);
+														int ingots = getAmountInInv(inv, Material.GOLD_INGOT, -1);
+														int nuggets = getAmountInInv(inv, Material.GOLD_NUGGET, -1);
+														int totalblocks = (blocks * 81);
+														int totalingots = (ingots * 9);
+														int total = totalblocks + totalingots + nuggets;
+														total = total / 9;
+														if (total >= buyPrice){
+															if (getNullsInInv(inv) >= (buyAmount / 64) + 1){
+																int remaining = buyPrice;
 																int removeB = 0;
-																int blocks = getAmountInInv(chestInv, Material.GOLD_BLOCK, -1);
-																int ingots = getAmountInInv(chestInv, Material.GOLD_INGOT, -1);
-																int nuggets = getAmountInInv(chestInv, Material.GOLD_NUGGET, -1);
-																if (sellPrice >= 9 && blocks >= 1){
+																if (buyPrice >= 9 && getAmountInInv(inv, Material.GOLD_BLOCK, -1) >= 1){
 																	int remove = 0;
 																	if (blocks >= remaining / 9){
-																		remove = sellPrice / 9;
+																		remove = buyPrice / 9;
 																	}
-																	else {
+																	else
 																		remove = blocks;
-																	}
 																	removeB = remove;
-																	removeFromInv(chestInv, Material.GOLD_BLOCK, 0, remove);
-																	remaining = sellPrice - (remove / 9);
+																	removeFromPlayerInv(player, Material.GOLD_BLOCK, 0, remove);
+																	remaining = buyPrice - (remove / 9);
 																}
-																if (remaining >= 1 && ingots >= 1){
+																if (remaining >= 1 && getAmountInInv(inv, Material.GOLD_INGOT, -1) >= 1){
 																	int remove = 0;
 																	if (ingots >= remaining){
 																		remove = remaining;
@@ -1041,39 +898,190 @@ public class GoldBank extends JavaPlugin implements Listener {
 																	else {
 																		remove = ingots;
 																	}
-																	removeFromInv(chestInv, Material.GOLD_INGOT, 0, remove);
+																	removeFromPlayerInv(player, Material.GOLD_INGOT, 0, remove);
 																	remaining = remaining - remove;
 																}
 																else if (remaining >= 1){
-																	removeFromInv(chestInv, Material.GOLD_BLOCK, 0, 1);
-																	chestInv.addItem(new ItemStack[] {
+																	removeFromPlayerInv(player, Material.GOLD_BLOCK, 0, 1);
+																	inv.addItem(new ItemStack[] {
 																			new ItemStack(Material.GOLD_INGOT, 9 - remaining)});
 																}
 																if (remaining >= 1){
-																	removeFromInv(chestInv, Material.GOLD_NUGGET, 0, remaining * 9);
+																	removeFromPlayerInv(player, Material.GOLD_NUGGET, 0, remaining * 9);
 																}
-																chestInv.addItem(new ItemStack[] {sellIs});
+																if (!admin){
+																	removeFromInv(chestInv, buyIs.getType(), 0, buyIs.getAmount());
+																	int newBlocks = buyPrice / 9;
+																	int blockRemainder = buyPrice - newBlocks * 9;
+																	int newIngots = blockRemainder;
+																	ItemStack addBlocks = new ItemStack(Material.GOLD_BLOCK, newBlocks);
+																	ItemStack addIngots = new ItemStack(Material.GOLD_INGOT, newIngots);
+																	if (addBlocks.getAmount() != 0)
+																		chestInv.addItem(new ItemStack[] {
+																				addBlocks});
+																	if (addIngots.getAmount() != 0)
+																		chestInv.addItem(new ItemStack[] {
+																				addIngots});
+																	if (getAmountInInv(chestInv, Material.GOLD_INGOT, -1) >= 9){
+																		int extraIngots = getAmountInInv(chestInv, Material.GOLD_INGOT, -1);
+																		int blockNum = extraIngots / 9;
+																		removeFromInv(chestInv, Material.GOLD_INGOT, 0, blockNum * 9);
+																		chestInv.addItem(new ItemStack[] {
+																				new ItemStack(Material.GOLD_BLOCK, blockNum)});
+																	}
+																}
+																inv.addItem(new ItemStack[] {buyIs});
+																player.updateInventory();
+																st.executeUpdate("INSERT INTO shoplog (shop, player, action, material, data, quantity, time) VALUES ('" + shopId + "', '" + player.getName() + "', '0', '" + mat.getId() + "', '" + dataValue + "', '" + buyIs.getAmount() + "', '" + System.currentTimeMillis() / 1000 + "')");
+																String buyPriceS = "s";
+																if (buyPrice == 1)
+																	buyPriceS = "";
+																player.sendMessage(ChatColor.DARK_PURPLE + "You bought " + buyAmount + " " + forMatName + " for " + buyPrice + " golden ingot" + buyPriceS + "!");
 															}
-															inv.addItem(new ItemStack[] {
-																	new ItemStack(Material.GOLD_INGOT, sellPrice)});
-															player.updateInventory();
-															st.executeUpdate("INSERT INTO shoplog (shop, player, action, material, data, quantity, time) VALUES ('" + shopId + "', '" + player.getName() + "', '1', '" + mat.getId() + "', '" + dataValue + "', '" + sellIs.getAmount() + "', '" + System.currentTimeMillis() / 1000 + "')");
-															String sellAmountS = "s";
-															if (sellAmount == 1)
-																sellAmountS = "";
-															String sellPriceS = "s";
-															if (sellPrice == 1)
-																sellPriceS = "";
-															player.sendMessage(ChatColor.DARK_PURPLE + "You sold " + sellAmount + " " + forMatName + sellAmountS + " for " + sellPrice + " golden ingot" + sellPriceS + "!");
+															else
+																player.sendMessage(ChatColor.RED + "Oh noes! You don't have enough open slots in your inventory!");
 														}
 														else
-															player.sendMessage(ChatColor.RED + "You do not have enough " + forMatName + "!");
+															player.sendMessage(ChatColor.RED + "Oh noes! You don't have enough gold to buy that!");
 													}
 													else
-														player.sendMessage(ChatColor.RED + "Error: The associated chest does not have enough gold!");
+														player.sendMessage(ChatColor.RED + "Error: The associated chest does not have enough " + forMatName + "!");
 												}
 												else
-													player.sendMessage(ChatColor.RED + "You may not sell damaged tools!");
+													player.sendMessage(ChatColor.RED + "You may not buy from this sign!");
+											}
+											// sell
+											else if (player.getItemInHand().getType() == mat){
+												e.setCancelled(true);
+												if (sellPrice == -1 && sellAmount == -1){
+													Material[] tools = new Material[]{
+															Material.DIAMOND_PICKAXE,
+															Material.DIAMOND_SWORD,
+															Material.DIAMOND_SPADE,
+															Material.DIAMOND_AXE,
+															Material.DIAMOND_HOE,
+															Material.DIAMOND_HELMET,
+															Material.DIAMOND_CHESTPLATE,
+															Material.DIAMOND_LEGGINGS,
+															Material.DIAMOND_BOOTS,
+															Material.IRON_PICKAXE,
+															Material.IRON_SWORD,
+															Material.IRON_SPADE,
+															Material.IRON_AXE,
+															Material.IRON_HOE,
+															Material.IRON_HELMET,
+															Material.IRON_CHESTPLATE,
+															Material.IRON_LEGGINGS,
+															Material.IRON_BOOTS,
+															Material.GOLD_PICKAXE,
+															Material.GOLD_SWORD,
+															Material.GOLD_SPADE,
+															Material.GOLD_AXE,
+															Material.GOLD_HOE,
+															Material.GOLD_HELMET,
+															Material.GOLD_CHESTPLATE,
+															Material.GOLD_LEGGINGS,
+															Material.GOLD_BOOTS,
+															Material.STONE_PICKAXE,
+															Material.STONE_SWORD,
+															Material.STONE_SPADE,
+															Material.STONE_AXE,
+															Material.STONE_HOE,
+															Material.CHAINMAIL_HELMET,
+															Material.CHAINMAIL_CHESTPLATE,
+															Material.CHAINMAIL_LEGGINGS,
+															Material.CHAINMAIL_BOOTS,
+															Material.WOOD_PICKAXE,
+															Material.WOOD_SWORD,
+															Material.WOOD_SPADE,
+															Material.WOOD_AXE,
+															Material.WOOD_HOE,
+															Material.LEATHER_HELMET,
+															Material.LEATHER_CHESTPLATE,
+															Material.LEATHER_LEGGINGS,
+															Material.LEATHER_BOOTS,
+															Material.FLINT_AND_STEEL,
+															Material.SHEARS,
+															Material.BOW,
+															Material.FISHING_ROD,
+															Material.ANVIL};
+													boolean newTool = true;
+													if (Arrays.asList(tools).contains(mat) && getConfig().getBoolean("selldamageditems") == false){
+														if (player.getItemInHand().getDurability() != 0){
+															newTool = false;
+														}
+													}
+													if (newTool){
+														boolean validSell = true;
+														if (!admin)
+															if (((getAmountInInv(chestInv, Material.GOLD_NUGGET, -1)) + (getAmountInInv(chestInv, Material.GOLD_INGOT, -1) * 9) + (getAmountInInv(chestInv, Material.GOLD_BLOCK, -1) * 81)) / 9 < sellPrice)
+																validSell = false;
+														if (validSell){
+															Inventory inv = player.getInventory();
+															if (getAmountInInv(inv, mat, dataValue) >= sellAmount){
+																removeFromPlayerInv(player, sellIs.getType(), sellIs.getDurability(), sellIs.getAmount());
+																if (!admin){
+																	int remaining = sellPrice;
+																	int removeB = 0;
+																	int blocks = getAmountInInv(chestInv, Material.GOLD_BLOCK, -1);
+																	int ingots = getAmountInInv(chestInv, Material.GOLD_INGOT, -1);
+																	int nuggets = getAmountInInv(chestInv, Material.GOLD_NUGGET, -1);
+																	if (sellPrice >= 9 && blocks >= 1){
+																		int remove = 0;
+																		if (blocks >= remaining / 9){
+																			remove = sellPrice / 9;
+																		}
+																		else {
+																			remove = blocks;
+																		}
+																		removeB = remove;
+																		removeFromInv(chestInv, Material.GOLD_BLOCK, 0, remove);
+																		remaining = sellPrice - (remove / 9);
+																	}
+																	if (remaining >= 1 && ingots >= 1){
+																		int remove = 0;
+																		if (ingots >= remaining){
+																			remove = remaining;
+																		}
+																		else {
+																			remove = ingots;
+																		}
+																		removeFromInv(chestInv, Material.GOLD_INGOT, 0, remove);
+																		remaining = remaining - remove;
+																	}
+																	else if (remaining >= 1){
+																		removeFromInv(chestInv, Material.GOLD_BLOCK, 0, 1);
+																		chestInv.addItem(new ItemStack[] {
+																				new ItemStack(Material.GOLD_INGOT, 9 - remaining)});
+																	}
+																	if (remaining >= 1){
+																		removeFromInv(chestInv, Material.GOLD_NUGGET, 0, remaining * 9);
+																	}
+																	chestInv.addItem(new ItemStack[] {sellIs});
+																}
+																inv.addItem(new ItemStack[] {
+																		new ItemStack(Material.GOLD_INGOT, sellPrice)});
+																player.updateInventory();
+																st.executeUpdate("INSERT INTO shoplog (shop, player, action, material, data, quantity, time) VALUES ('" + shopId + "', '" + player.getName() + "', '1', '" + mat.getId() + "', '" + dataValue + "', '" + sellIs.getAmount() + "', '" + System.currentTimeMillis() / 1000 + "')");
+																String sellAmountS = "s";
+																if (sellAmount == 1)
+																	sellAmountS = "";
+																String sellPriceS = "s";
+																if (sellPrice == 1)
+																	sellPriceS = "";
+																player.sendMessage(ChatColor.DARK_PURPLE + "You sold " + sellAmount + " " + forMatName + sellAmountS + " for " + sellPrice + " golden ingot" + sellPriceS + "!");
+															}
+															else
+																player.sendMessage(ChatColor.RED + "You do not have enough " + forMatName + "!");
+														}
+														else
+															player.sendMessage(ChatColor.RED + "Error: The associated chest does not have enough gold!");
+													}
+													else
+														player.sendMessage(ChatColor.RED + "You may not sell damaged tools!");
+												}
+												else
+													player.sendMessage(ChatColor.RED + "You may not sell to this sign!");
 											}
 											else
 												player.sendMessage(ChatColor.RED + "You must have gold or " + forMatName + " in your hand to use this sign!");
@@ -1965,8 +1973,8 @@ public class GoldBank extends JavaPlugin implements Listener {
 					normal = true;
 				}
 				if (player.hasPermission("goldbank.sign.shop.create.admin") || normal){
-					String[] buys = new String[]{"blank", "blank"};
-					String[] sells = new String[]{"blank", "blank"};
+					String[] buys = new String[]{"-1", "-1"};
+					String[] sells = new String[]{"-1", "-1"};
 					String buy = p.getLine(1);
 					boolean validBuy = false;
 					boolean validSell = false;
@@ -1974,17 +1982,23 @@ public class GoldBank extends JavaPlugin implements Listener {
 						buy = buy.replace(" ", "");
 						buys = buy.split(";");
 						if (isInt(buys[0]) && isInt(buys[1])){
-							validBuy = true;
+							if (Integer.parseInt(buys[0]) > 0 && Integer.parseInt(buys[1]) > 0)
+								validBuy = true;
 						}
 					}
+					else if (buy.length() == 0)
+						validBuy = true;
 					String sell = p.getLine(2);
 					if (sell.contains(";")){
 						sell = sell.replace(" ", "");
 						sells = sell.split(";");
 						if (isInt(sells[0]) && isInt(sells[1])){
-							validSell = true;
+							if (Integer.parseInt(sells[0]) > 0 && Integer.parseInt(sells[1]) > 0)
+								validSell = true;
 						}
 					}
+					else if (sell.length() == 0)
+						validSell = true;
 					if (validBuy && validSell){
 						int dataNum = 0;
 						if (data != null){
@@ -2146,7 +2160,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 						}
 					}
 					else
-						player.sendMessage(ChatColor.RED + "Invalid sign! Buy and sell signs nust contain delimiter (;) or be left blank!");
+						player.sendMessage(ChatColor.RED + "Invalid sign! Buy and sell signs nust contain delimiter (;) or be left blank, and prices and amounts must be integers greater than 0.");
 				}
 			}
 		}
@@ -2190,7 +2204,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 		}
 		return total;
 	}
-	
+
 	public static int getAmountInInv(Inventory inv, Material item){
 		return getAmountInInv(inv, item, -1);
 	}
