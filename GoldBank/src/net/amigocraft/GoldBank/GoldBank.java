@@ -211,13 +211,19 @@ public class GoldBank extends JavaPlugin implements Listener {
 					"buyprice INTEGER NOT NULL," +
 					"sellamount INTEGER NOT NULL," +
 					"sellprice INTEGER NOT NULL," +
+					"buyunit VARCHAR(1) NOT NULL," +
+					"sellunit VARCHAR(1) NOT NULL," +
 					"admin BOOLEAN NOT NULL)");
 			st.executeUpdate("DROP TABLE IF EXISTS nbt");
 			if (!colExists("shops", "world")){
 				String world = getServer().getWorlds().get(0).getName();
-				st.executeUpdate("ALTER TABLE chestdata ADD world VARCHAR(100) DEFAULT 'world' NOT NULL");
-				st.executeUpdate("UPDATE chestdata SET world = '" + world + "'");
+				st.executeUpdate("ALTER TABLE shops ADD world VARCHAR(100) DEFAULT 'world' NOT NULL");
+				st.executeUpdate("UPDATE shops SET world = '" + world + "'");
 			}
+			if (!colExists("shops", "buyunit"))
+				st.executeUpdate("ALTER TABLE shops ADD buyunit VARCHAR(1) DEFAULT 'i' NOT NULL");
+			if (!colExists("shops", "sellunit"))
+				st.executeUpdate("ALTER TABLE shops ADD sellunit VARCHAR(1) DEFAULT 'i' NOT NULL");
 			st.executeUpdate("CREATE TABLE IF NOT EXISTS shoplog (" +
 					"id INTEGER NOT NULL PRIMARY KEY," +
 					"shop INTEGER NOT NULL," +
@@ -843,6 +849,20 @@ public class GoldBank extends JavaPlugin implements Listener {
 										int buyAmount = rs.getInt("buyamount");
 										int sellPrice = rs.getInt("sellprice");
 										int sellAmount = rs.getInt("sellamount");
+										String buyUnit = rs.getString("buyunit");
+										String sellUnit = rs.getString("sellunit");
+										int buyMult = 1;
+										if (buyUnit == "i")
+											buyMult = 9;
+										if (buyUnit == "b")
+											buyMult = 81;
+										int sellMult = 1;
+										if (sellUnit == "i")
+											sellMult = 9;
+										if (sellUnit == "b")
+											sellMult = 81;
+										buyPrice = buyPrice * buyMult;
+										sellPrice = sellPrice * sellMult;
 										ItemStack buyIs = new ItemStack(mat, buyAmount);
 										buyIs.setDurability((short)dataValue);
 										ItemStack sellIs = new ItemStack(mat, sellAmount);
@@ -861,7 +881,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 											// buy
 											if (player.getItemInHand().getType() == Material.GOLD_BLOCK || player.getItemInHand().getType() == Material.GOLD_INGOT || player.getItemInHand().getType() == Material.GOLD_NUGGET){
 												e.setCancelled(true);
-												if (buyPrice == -1 && buyAmount == -1){
+												if (buyPrice > 0 && buyAmount > 0){
 													boolean enough = true;
 													if (chestInv != null)
 														if ((getAmountInInv(chestInv, mat, dataValue) < buyAmount && !admin) || admin)
@@ -874,23 +894,22 @@ public class GoldBank extends JavaPlugin implements Listener {
 														int totalblocks = (blocks * 81);
 														int totalingots = (ingots * 9);
 														int total = totalblocks + totalingots + nuggets;
-														total = total / 9;
 														if (total >= buyPrice){
 															if (getNullsInInv(inv) >= (buyAmount / 64) + 1){
 																int remaining = buyPrice;
 																int removeB = 0;
-																if (buyPrice >= 9 && getAmountInInv(inv, Material.GOLD_BLOCK, -1) >= 1){
+																if (remaining >= 81 && getAmountInInv(inv, Material.GOLD_BLOCK, -1) >= 1){
 																	int remove = 0;
-																	if (blocks >= remaining / 9){
-																		remove = buyPrice / 9;
+																	if (blocks >= remaining / 81){
+																		remove = remaining / 81;
 																	}
 																	else
 																		remove = blocks;
 																	removeB = remove;
 																	removeFromPlayerInv(player, Material.GOLD_BLOCK, 0, remove);
-																	remaining = buyPrice - (remove / 9);
+																	remaining = buyPrice - (remove * 81);
 																}
-																if (remaining >= 1 && getAmountInInv(inv, Material.GOLD_INGOT, -1) >= 1){
+																if (remaining >= 9 && getAmountInInv(inv, Material.GOLD_INGOT, -1) >= 1){
 																	int remove = 0;
 																	if (ingots >= remaining){
 																		remove = remaining;
@@ -901,13 +920,13 @@ public class GoldBank extends JavaPlugin implements Listener {
 																	removeFromPlayerInv(player, Material.GOLD_INGOT, 0, remove);
 																	remaining = remaining - remove;
 																}
-																else if (remaining >= 1){
+																else if (remaining >= 9 && getAmountInInv(player.getInventory(), Material.GOLD_BLOCK) >= 1){
 																	removeFromPlayerInv(player, Material.GOLD_BLOCK, 0, 1);
 																	inv.addItem(new ItemStack[] {
 																			new ItemStack(Material.GOLD_INGOT, 9 - remaining)});
 																}
 																if (remaining >= 1){
-																	removeFromPlayerInv(player, Material.GOLD_NUGGET, 0, remaining * 9);
+																	removeFromPlayerInv(player, Material.GOLD_NUGGET, 0, remaining);
 																}
 																if (!admin){
 																	removeFromInv(chestInv, buyIs.getType(), 0, buyIs.getAmount());
@@ -922,7 +941,14 @@ public class GoldBank extends JavaPlugin implements Listener {
 																	if (addIngots.getAmount() != 0)
 																		chestInv.addItem(new ItemStack[] {
 																				addIngots});
-																	if (getAmountInInv(chestInv, Material.GOLD_INGOT, -1) >= 9){
+																	if (getAmountInInv(chestInv, Material.GOLD_NUGGET) >= 9){
+																		int extraNuggets = getAmountInInv(chestInv, Material.GOLD_INGOT, -1);
+																		int ingotNum = extraNuggets / 9;
+																		removeFromInv(chestInv, Material.GOLD_NUGGET, 0, ingotNum * 9);
+																		chestInv.addItem(new ItemStack[] {
+																				new ItemStack(Material.GOLD_INGOT, ingotNum)});
+																	}
+																	if (getAmountInInv(chestInv, Material.GOLD_INGOT) >= 9){
 																		int extraIngots = getAmountInInv(chestInv, Material.GOLD_INGOT, -1);
 																		int blockNum = extraIngots / 9;
 																		removeFromInv(chestInv, Material.GOLD_INGOT, 0, blockNum * 9);
@@ -953,7 +979,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 											// sell
 											else if (player.getItemInHand().getType() == mat){
 												e.setCancelled(true);
-												if (sellPrice == -1 && sellAmount == -1){
+												if (sellPrice > 0 && sellAmount > 0){
 													Material[] tools = new Material[]{
 															Material.DIAMOND_PICKAXE,
 															Material.DIAMOND_SWORD,
@@ -1978,9 +2004,33 @@ public class GoldBank extends JavaPlugin implements Listener {
 					String buy = p.getLine(1);
 					boolean validBuy = false;
 					boolean validSell = false;
+					String buyUnit = "i";
+					String sellUnit = "i";
 					if (buy.contains(";")){
 						buy = buy.replace(" ", "");
 						buys = buy.split(";");
+						if (buys[1].contains("b")){
+							buys[1] = buys[1].replace("b", "");
+							buyUnit = "b";
+						}
+						else if (buys[1].contains("i")){
+							buys[1] = buys[1].replace("i", "");
+						}
+						else if (buys[1].contains("n")){
+							buys[1] = buys[1].replace("n", "");
+							buyUnit = "n";
+						}
+						if (sells[1].contains("b")){
+							sells[1] = sells[1].replace("b", "");
+							sellUnit = "b";
+						}
+						else if (sells[1].contains("i")){
+							sells[1] = sells[1].replace("i", "");
+						}
+						else if (sells[1].contains("n")){
+							sells[1] = sells[1].replace("n", "");
+							sellUnit = "n";
+						}
 						if (isInt(buys[0]) && isInt(buys[1])){
 							if (Integer.parseInt(buys[0]) > 0 && Integer.parseInt(buys[1]) > 0)
 								validBuy = true;
@@ -2076,7 +2126,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 										else {
 											matId = Material.getMaterial(rline).getId();
 										}
-										st.executeUpdate("INSERT INTO shops (creator, world, x, y, z, material, data, buyamount, buyprice, sellamount, sellprice, admin) VALUES (" +
+										st.executeUpdate("INSERT INTO shops (creator, world, x, y, z, material, data, buyamount, buyprice, sellamount, sellprice, admin, buyunit, sellunit) VALUES (" +
 												"'" + player.getName() +
 												"', '" + player.getWorld().getName() +
 												"', '" + x +
@@ -2088,7 +2138,9 @@ public class GoldBank extends JavaPlugin implements Listener {
 												"', '" + buys[1] +
 												"', '" + sells[0] +
 												"', '" + sells[1] +
-												"', '" + admin + "')");
+												"', '" + admin +
+												"', '" + buyUnit +
+												"', '" + sellUnit + "')");
 										rs = st.executeQuery("SELECT * FROM shops WHERE world = '" + player.getWorld().getName() + "' AND x = '" + x + "' AND y = '" + y + "' AND z = '" + z + "'");
 										int shopId = rs.getInt("id");
 										st.executeUpdate("INSERT INTO shoplog (shop, player, action, time) VALUES ('" + shopId + "', '" + player.getName() + "', '2', '" + System.currentTimeMillis() / 1000 + "')");
@@ -2114,13 +2166,13 @@ public class GoldBank extends JavaPlugin implements Listener {
 												p.setLine(0, "§2[" + matId + ":" + dataNum + "]");
 										}
 										if (buys[0].length() + buys[1].length() <= 3)
-											p.setLine(1, "§5" + "Buy " + buys[0] + " for " + buys[1] + "g");
+											p.setLine(1, "§5" + "Buy " + buys[0] + " for " + buys[1] + buyUnit);
 										else
-											p.setLine(1, "Buy " + buys[0] + " for " + buys[1] + "g");
+											p.setLine(1, "Buy " + buys[0] + " for " + buys[1] + buyUnit);
 										if (sells[0].length() + sells[1].length() <= 2)
-											p.setLine(2, "§5" + "Sell " + sells[0] + " for " + sells[1] + "g");
+											p.setLine(2, "§5" + "Sell " + sells[0] + " for " + sells[1] + sellUnit);
 										else
-											p.setLine(2, "Sell " + sells[0] + " for " + sells[1] + "g");
+											p.setLine(2, "Sell " + sells[0] + " for " + sells[1] + sellUnit);
 										if (normal)
 											p.setLine(3, "§9" + player.getName());
 										else
