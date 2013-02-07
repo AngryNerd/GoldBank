@@ -29,6 +29,8 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.logging.Logger;
 
+import net.amigocraft.GoldBank.util.*;
+
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.lang.WordUtils;
 import org.bukkit.Bukkit;
@@ -187,13 +189,13 @@ public class GoldBank extends JavaPlugin implements Listener {
 					"z INTEGER NOT NULL," +
 					"sign BOOLEAN NOT NULL," +
 					"tier INTEGER NOT NULL)");
-			if (!colExists("chestdata", "sign")){
+			if (!MiscUtils.colExists("chestdata", "sign")){
 				st.executeUpdate("ALTER TABLE chestdata ADD sign BOOLEAN DEFAULT 'false' NOT NULL");
 				st.executeUpdate("UPDATE chestdata SET y='y+1', sign='true'");
 			}
-			if (!colExists("chestdata", "tier"))
+			if (!MiscUtils.colExists("chestdata", "tier"))
 				st.executeUpdate("ALTER TABLE chestdata ADD tier BOOLEAN DEFAULT '1' NOT NULL");
-			if (!colExists("chestdata", "world")){
+			if (!MiscUtils.colExists("chestdata", "world")){
 				String world = getServer().getWorlds().get(0).getName();
 				st.executeUpdate("ALTER TABLE chestdata ADD world VARCHAR(100) DEFAULT 'world' NOT NULL");
 				st.executeUpdate("UPDATE chestdata SET world = '" + world + "'");
@@ -215,14 +217,14 @@ public class GoldBank extends JavaPlugin implements Listener {
 					"sellunit VARCHAR(1) NOT NULL," +
 					"admin BOOLEAN NOT NULL)");
 			st.executeUpdate("DROP TABLE IF EXISTS nbt");
-			if (!colExists("shops", "world")){
+			if (!MiscUtils.colExists("shops", "world")){
 				String world = getServer().getWorlds().get(0).getName();
 				st.executeUpdate("ALTER TABLE shops ADD world VARCHAR(100) DEFAULT 'world' NOT NULL");
 				st.executeUpdate("UPDATE shops SET world = '" + world + "'");
 			}
-			if (!colExists("shops", "buyunit"))
+			if (!MiscUtils.colExists("shops", "buyunit"))
 				st.executeUpdate("ALTER TABLE shops ADD buyunit VARCHAR(1) DEFAULT 'i' NOT NULL");
-			if (!colExists("shops", "sellunit"))
+			if (!MiscUtils.colExists("shops", "sellunit"))
 				st.executeUpdate("ALTER TABLE shops ADD sellunit VARCHAR(1) DEFAULT 'i' NOT NULL");
 			st.executeUpdate("CREATE TABLE IF NOT EXISTS shoplog (" +
 					"id INTEGER NOT NULL PRIMARY KEY," +
@@ -548,7 +550,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 											int tier = 1;
 											if (sign.getLine(1).length() >= 6){
 												if (sign.getLine(1).substring(0, 6).equalsIgnoreCase("§4Tier")){
-													if (isInt(sign.getLine(1).substring(7, 8))){
+													if (MiscUtils.isInt(sign.getLine(1).substring(7, 8))){
 														if (getConfig().isSet("tiers." + Integer.parseInt(sign.getLine(1).substring(7, 8)) + ".size")){
 															if (getConfig().isSet("tiers." + Integer.parseInt(sign.getLine(1).substring(7, 8)) + ".fee")){
 																tier = Integer.parseInt(sign.getLine(1).substring(7, 8));
@@ -712,7 +714,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 								if (atmfee != 0){
 									notzero = true;
 									Inventory pInv = player.getInventory();
-									int nuggets = getAmountInInv(pInv, Material.GOLD_NUGGET, -1);
+									int nuggets = InventoryUtils.getAmountInInv(pInv, Material.GOLD_NUGGET, -1);
 									if (nuggets >= atmfee){
 										enough = true;
 									}
@@ -740,7 +742,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 									if (count == 1){
 										if (enough == true){
 											if (notzero == true){
-												removeFromPlayerInv(player, Material.GOLD_NUGGET, 0, atmfee);
+												InventoryUtils.removeFromPlayerInv(player, Material.GOLD_NUGGET, 0, atmfee);
 												player.sendMessage(ChatColor.DARK_PURPLE + "Charged " + atmfee + " golden nuggets");
 											}
 											else {
@@ -884,21 +886,21 @@ public class GoldBank extends JavaPlugin implements Listener {
 												if (buyPrice > 0 && buyAmount > 0){
 													boolean enough = true;
 													if (chestInv != null)
-														if ((getAmountInInv(chestInv, mat, dataValue) < buyAmount && !admin) || admin)
+														if ((InventoryUtils.getAmountInInv(chestInv, mat, dataValue) < buyAmount && !admin) || admin)
 															enough = false;
 													if (enough){
 														Inventory inv = player.getInventory();
-														int blocks = getAmountInInv(inv, Material.GOLD_BLOCK, -1);
-														int ingots = getAmountInInv(inv, Material.GOLD_INGOT, -1);
-														int nuggets = getAmountInInv(inv, Material.GOLD_NUGGET, -1);
+														int blocks = InventoryUtils.getAmountInInv(inv, Material.GOLD_BLOCK, -1);
+														int ingots = InventoryUtils.getAmountInInv(inv, Material.GOLD_INGOT, -1);
+														int nuggets = InventoryUtils.getAmountInInv(inv, Material.GOLD_NUGGET, -1);
 														int totalblocks = (blocks * 81);
 														int totalingots = (ingots * 9);
 														int total = totalblocks + totalingots + nuggets;
 														if (total >= buyPrice){
-															if (getNullsInInv(inv) >= (buyAmount / 64) + 1){
+															if (InventoryUtils.getNullsInInv(inv) >= (buyAmount / 64) + 1){
 																int remaining = buyPrice;
 																int removeB = 0;
-																if (remaining >= 81 && getAmountInInv(inv, Material.GOLD_BLOCK, -1) >= 1){
+																if (remaining >= 81 && InventoryUtils.getAmountInInv(inv, Material.GOLD_BLOCK, -1) >= 1){
 																	int remove = 0;
 																	if (blocks >= remaining / 81){
 																		remove = remaining / 81;
@@ -906,10 +908,10 @@ public class GoldBank extends JavaPlugin implements Listener {
 																	else
 																		remove = blocks;
 																	removeB = remove;
-																	removeFromPlayerInv(player, Material.GOLD_BLOCK, 0, remove);
+																	InventoryUtils.removeFromPlayerInv(player, Material.GOLD_BLOCK, 0, remove);
 																	remaining = buyPrice - (remove * 81);
 																}
-																if (remaining >= 9 && getAmountInInv(inv, Material.GOLD_INGOT, -1) >= 1){
+																if (remaining >= 9 && InventoryUtils.getAmountInInv(inv, Material.GOLD_INGOT, -1) >= 1){
 																	int remove = 0;
 																	if (ingots >= remaining){
 																		remove = remaining;
@@ -917,19 +919,19 @@ public class GoldBank extends JavaPlugin implements Listener {
 																	else {
 																		remove = ingots;
 																	}
-																	removeFromPlayerInv(player, Material.GOLD_INGOT, 0, remove);
+																	InventoryUtils.removeFromPlayerInv(player, Material.GOLD_INGOT, 0, remove);
 																	remaining = remaining - remove;
 																}
-																else if (remaining >= 9 && getAmountInInv(player.getInventory(), Material.GOLD_BLOCK) >= 1){
-																	removeFromPlayerInv(player, Material.GOLD_BLOCK, 0, 1);
+																else if (remaining >= 9 && InventoryUtils.getAmountInInv(player.getInventory(), Material.GOLD_BLOCK) >= 1){
+																	InventoryUtils.removeFromPlayerInv(player, Material.GOLD_BLOCK, 0, 1);
 																	inv.addItem(new ItemStack[] {
 																			new ItemStack(Material.GOLD_INGOT, 9 - remaining)});
 																}
 																if (remaining >= 1){
-																	removeFromPlayerInv(player, Material.GOLD_NUGGET, 0, remaining);
+																	InventoryUtils.removeFromPlayerInv(player, Material.GOLD_NUGGET, 0, remaining);
 																}
 																if (!admin){
-																	removeFromInv(chestInv, buyIs.getType(), 0, buyIs.getAmount());
+																	InventoryUtils.removeFromInv(chestInv, buyIs.getType(), 0, buyIs.getAmount());
 																	int newBlocks = buyPrice / 9;
 																	int blockRemainder = buyPrice - newBlocks * 9;
 																	int newIngots = blockRemainder;
@@ -941,17 +943,17 @@ public class GoldBank extends JavaPlugin implements Listener {
 																	if (addIngots.getAmount() != 0)
 																		chestInv.addItem(new ItemStack[] {
 																				addIngots});
-																	if (getAmountInInv(chestInv, Material.GOLD_NUGGET) >= 9){
-																		int extraNuggets = getAmountInInv(chestInv, Material.GOLD_INGOT, -1);
+																	if (InventoryUtils.getAmountInInv(chestInv, Material.GOLD_NUGGET) >= 9){
+																		int extraNuggets = InventoryUtils.getAmountInInv(chestInv, Material.GOLD_INGOT, -1);
 																		int ingotNum = extraNuggets / 9;
-																		removeFromInv(chestInv, Material.GOLD_NUGGET, 0, ingotNum * 9);
+																		InventoryUtils.removeFromInv(chestInv, Material.GOLD_NUGGET, 0, ingotNum * 9);
 																		chestInv.addItem(new ItemStack[] {
 																				new ItemStack(Material.GOLD_INGOT, ingotNum)});
 																	}
-																	if (getAmountInInv(chestInv, Material.GOLD_INGOT) >= 9){
-																		int extraIngots = getAmountInInv(chestInv, Material.GOLD_INGOT, -1);
+																	if (InventoryUtils.getAmountInInv(chestInv, Material.GOLD_INGOT) >= 9){
+																		int extraIngots = InventoryUtils.getAmountInInv(chestInv, Material.GOLD_INGOT, -1);
 																		int blockNum = extraIngots / 9;
-																		removeFromInv(chestInv, Material.GOLD_INGOT, 0, blockNum * 9);
+																		InventoryUtils.removeFromInv(chestInv, Material.GOLD_INGOT, 0, blockNum * 9);
 																		chestInv.addItem(new ItemStack[] {
 																				new ItemStack(Material.GOLD_BLOCK, blockNum)});
 																	}
@@ -1040,18 +1042,18 @@ public class GoldBank extends JavaPlugin implements Listener {
 													if (newTool){
 														boolean validSell = true;
 														if (!admin)
-															if (((getAmountInInv(chestInv, Material.GOLD_NUGGET, -1)) + (getAmountInInv(chestInv, Material.GOLD_INGOT, -1) * 9) + (getAmountInInv(chestInv, Material.GOLD_BLOCK, -1) * 81)) / 9 < sellPrice)
+															if (((InventoryUtils.getAmountInInv(chestInv, Material.GOLD_NUGGET, -1)) + (InventoryUtils.getAmountInInv(chestInv, Material.GOLD_INGOT, -1) * 9) + (InventoryUtils.getAmountInInv(chestInv, Material.GOLD_BLOCK, -1) * 81)) / 9 < sellPrice)
 																validSell = false;
 														if (validSell){
 															Inventory inv = player.getInventory();
-															if (getAmountInInv(inv, mat, dataValue) >= sellAmount){
-																removeFromPlayerInv(player, sellIs.getType(), sellIs.getDurability(), sellIs.getAmount());
+															if (InventoryUtils.getAmountInInv(inv, mat, dataValue) >= sellAmount){
+																InventoryUtils.removeFromPlayerInv(player, sellIs.getType(), sellIs.getDurability(), sellIs.getAmount());
 																if (!admin){
 																	int remaining = sellPrice;
 																	int removeB = 0;
-																	int blocks = getAmountInInv(chestInv, Material.GOLD_BLOCK, -1);
-																	int ingots = getAmountInInv(chestInv, Material.GOLD_INGOT, -1);
-																	int nuggets = getAmountInInv(chestInv, Material.GOLD_NUGGET, -1);
+																	int blocks = InventoryUtils.getAmountInInv(chestInv, Material.GOLD_BLOCK, -1);
+																	int ingots = InventoryUtils.getAmountInInv(chestInv, Material.GOLD_INGOT, -1);
+																	int nuggets = InventoryUtils.getAmountInInv(chestInv, Material.GOLD_NUGGET, -1);
 																	if (sellPrice >= 9 && blocks >= 1){
 																		int remove = 0;
 																		if (blocks >= remaining / 9){
@@ -1061,7 +1063,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 																			remove = blocks;
 																		}
 																		removeB = remove;
-																		removeFromInv(chestInv, Material.GOLD_BLOCK, 0, remove);
+																		InventoryUtils.removeFromInv(chestInv, Material.GOLD_BLOCK, 0, remove);
 																		remaining = sellPrice - (remove / 9);
 																	}
 																	if (remaining >= 1 && ingots >= 1){
@@ -1072,16 +1074,16 @@ public class GoldBank extends JavaPlugin implements Listener {
 																		else {
 																			remove = ingots;
 																		}
-																		removeFromInv(chestInv, Material.GOLD_INGOT, 0, remove);
+																		InventoryUtils.removeFromInv(chestInv, Material.GOLD_INGOT, 0, remove);
 																		remaining = remaining - remove;
 																	}
 																	else if (remaining >= 1){
-																		removeFromInv(chestInv, Material.GOLD_BLOCK, 0, 1);
+																		InventoryUtils.removeFromInv(chestInv, Material.GOLD_BLOCK, 0, 1);
 																		chestInv.addItem(new ItemStack[] {
 																				new ItemStack(Material.GOLD_INGOT, 9 - remaining)});
 																	}
 																	if (remaining >= 1){
-																		removeFromInv(chestInv, Material.GOLD_NUGGET, 0, remaining * 9);
+																		InventoryUtils.removeFromInv(chestInv, Material.GOLD_NUGGET, 0, remaining * 9);
 																	}
 																	chestInv.addItem(new ItemStack[] {sellIs});
 																}
@@ -1308,11 +1310,11 @@ public class GoldBank extends JavaPlugin implements Listener {
 		if (b.getBlock().getType() == Material.WALL_SIGN || b.getBlock().getType() == Material.SIGN_POST){
 			Sign sign = (Sign)b.getBlock().getState();
 			Block adjBlock = null;
-			if (getAdjacentBlock(b.getBlock(), Material.WALL_SIGN) != null){
-				adjBlock = getAdjacentBlock(b.getBlock(), Material.WALL_SIGN);
+			if (MiscUtils.getAdjacentBlock(b.getBlock(), Material.WALL_SIGN) != null){
+				adjBlock = MiscUtils.getAdjacentBlock(b.getBlock(), Material.WALL_SIGN);
 			}
-			else if (getAdjacentBlock(b.getBlock(), Material.SIGN_POST)!= null){
-				adjBlock = getAdjacentBlock(b.getBlock(), Material.SIGN_POST);
+			else if (MiscUtils.getAdjacentBlock(b.getBlock(), Material.SIGN_POST)!= null){
+				adjBlock = MiscUtils.getAdjacentBlock(b.getBlock(), Material.SIGN_POST);
 			}
 			Connection conn = null;
 			Statement st = null;
@@ -1425,13 +1427,13 @@ public class GoldBank extends JavaPlugin implements Listener {
 				}
 			}
 		}
-		if (getAdjacentBlock(b.getBlock(), Material.WALL_SIGN) != null || getAdjacentBlock(b.getBlock(), Material.SIGN_POST) != null){
+		if (MiscUtils.getAdjacentBlock(b.getBlock(), Material.WALL_SIGN) != null || MiscUtils.getAdjacentBlock(b.getBlock(), Material.SIGN_POST) != null){
 			Block adjBlock = null;
-			if (getAdjacentBlock(b.getBlock(), Material.WALL_SIGN) != null){
-				adjBlock = getAdjacentBlock(b.getBlock(), Material.WALL_SIGN);
+			if (MiscUtils.getAdjacentBlock(b.getBlock(), Material.WALL_SIGN) != null){
+				adjBlock = MiscUtils.getAdjacentBlock(b.getBlock(), Material.WALL_SIGN);
 			}
-			else if (getAdjacentBlock(b.getBlock(), Material.SIGN_POST)!= null){
-				adjBlock = getAdjacentBlock(b.getBlock(), Material.SIGN_POST);
+			else if (MiscUtils.getAdjacentBlock(b.getBlock(), Material.SIGN_POST)!= null){
+				adjBlock = MiscUtils.getAdjacentBlock(b.getBlock(), Material.SIGN_POST);
 			}
 			Sign sign = (Sign)adjBlock.getState();
 			Connection conn = null;
@@ -1568,8 +1570,8 @@ public class GoldBank extends JavaPlugin implements Listener {
 				}
 			}
 		}
-		else if (getAdjacentBlock(b.getBlock(), Material.SIGN_POST) != null){
-			Block adjblock = getAdjacentBlock(b.getBlock(), Material.SIGN_POST);
+		else if (MiscUtils.getAdjacentBlock(b.getBlock(), Material.SIGN_POST) != null){
+			Block adjblock = MiscUtils.getAdjacentBlock(b.getBlock(), Material.SIGN_POST);
 			Sign sign = (Sign)adjblock.getState();
 			if (sign.getLine(0).equalsIgnoreCase("§2[GoldBank]")){
 				if (!b.getPlayer().hasPermission("goldbank.sign.bank.destroy")){
@@ -1756,12 +1758,12 @@ public class GoldBank extends JavaPlugin implements Listener {
 					data = matInfo[1];
 				}
 				boolean isValidInt = false;
-				if (isInt(rline)){
-					if (isMat(Integer.parseInt(rline))){
+				if (MiscUtils.isInt(rline)){
+					if (MiscUtils.isMat(Integer.parseInt(rline))){
 						isValidInt = true;
 					}
 				}
-				if (isMat(rline) || isValidInt){
+				if (MiscUtils.isMat(rline) || isValidInt){
 					it.remove();
 				}
 			}
@@ -1783,22 +1785,22 @@ public class GoldBank extends JavaPlugin implements Listener {
 					data = matInfo[1];
 				}
 				boolean isValidInt = false;
-				if (isInt(rline)){
-					if (isMat(Integer.parseInt(rline))){
+				if (MiscUtils.isInt(rline)){
+					if (MiscUtils.isMat(Integer.parseInt(rline))){
 						isValidInt = true;
 					}
 				}
-				if (isMat(rline) || isValidInt){
+				if (MiscUtils.isMat(rline) || isValidInt){
 					it.remove();
 				}
 			}
-			else if (getAdjacentBlock(block, Material.WALL_SIGN) != null || getAdjacentBlock(block, Material.SIGN_POST) != null){
+			else if (MiscUtils.getAdjacentBlock(block, Material.WALL_SIGN) != null || MiscUtils.getAdjacentBlock(block, Material.SIGN_POST) != null){
 				Block adjBlock = null;
-				if (getAdjacentBlock(block, Material.WALL_SIGN) != null){
-					adjBlock = getAdjacentBlock(block, Material.WALL_SIGN);
+				if (MiscUtils.getAdjacentBlock(block, Material.WALL_SIGN) != null){
+					adjBlock = MiscUtils.getAdjacentBlock(block, Material.WALL_SIGN);
 				}
-				else if (getAdjacentBlock(block, Material.SIGN_POST) != null){
-					adjBlock = getAdjacentBlock(block, Material.SIGN_POST);
+				else if (MiscUtils.getAdjacentBlock(block, Material.SIGN_POST) != null){
+					adjBlock = MiscUtils.getAdjacentBlock(block, Material.SIGN_POST);
 				}
 				Sign sign = (Sign)adjBlock.getState();
 				if (sign.getLine(0).equalsIgnoreCase("§2[GoldBank]")){
@@ -1821,12 +1823,12 @@ public class GoldBank extends JavaPlugin implements Listener {
 						data = matInfo[1];
 					}
 					boolean isValidInt = false;
-					if (isInt(rline)){
-						if (isMat(Integer.parseInt(rline))){
+					if (MiscUtils.isInt(rline)){
+						if (MiscUtils.isMat(Integer.parseInt(rline))){
 							isValidInt = true;
 						}
 					}
-					if (isMat(rline) || isValidInt){
+					if (MiscUtils.isMat(rline) || isValidInt){
 						it.remove();
 					}
 				}
@@ -1841,7 +1843,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 		String line = p.getLine(0);
 		String rline = line;
 		char[] lineChar = rline.toCharArray();
-		if (charKeyExists(lineChar, 0)){
+		if (MiscUtils.charKeyExists(lineChar, 0)){
 			if (Character.toString(lineChar[0]).equals("[") && Character.toString(lineChar[lineChar.length - 1]).equals("]")){
 				rline = rline.replace("[", "");
 				rline = rline.replace("]", "");
@@ -1898,7 +1900,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 				}
 				int tier = 1;
 				if (p.getLine(1).length() >= 5){
-					if (p.getLine(1).substring(0, 4).equalsIgnoreCase("Tier") && isInt(p.getLine(1).substring(5, 6))){
+					if (p.getLine(1).substring(0, 4).equalsIgnoreCase("Tier") && MiscUtils.isInt(p.getLine(1).substring(5, 6))){
 						if (getConfig().isSet("tiers." + p.getLine(1).substring(0, 4) + ".size") && getConfig().isSet("tiers." + p.getLine(1).substring(0, 4) + ".fee")){
 							tier = Integer.parseInt(p.getLine(1).substring(5, 6));
 							p.setLine(1, "§4Tier " + p.getLine(1).substring(5, 6));
@@ -1912,7 +1914,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 					}
 				}
 				else if (p.getLine(1).length() >= 1){
-					if (isInt(p.getLine(1).substring(0, 1))){
+					if (MiscUtils.isInt(p.getLine(1).substring(0, 1))){
 						if (getConfig().isSet("tiers." + Integer.parseInt(p.getLine(1).substring(0, 1)) + ".size")){
 							if (getConfig().isSet("tiers." + Integer.parseInt(p.getLine(1).substring(0, 1)) + ".fee")){
 								tier = Integer.parseInt(p.getLine(1).substring(0, 1));
@@ -1980,12 +1982,12 @@ public class GoldBank extends JavaPlugin implements Listener {
 		}
 		rline = rline.replace(" ", "_");
 		boolean isValidInt = false;
-		if (isInt(rline)){
-			if (isMat(Integer.parseInt(rline))){
+		if (MiscUtils.isInt(rline)){
+			if (MiscUtils.isMat(Integer.parseInt(rline))){
 				isValidInt = true;
 			}
 		}
-		if (isMat(rline) || isValidInt){
+		if (MiscUtils.isMat(rline) || isValidInt){
 			String mat = "";
 			if (isValidInt){
 				mat = WordUtils.capitalize(Material.getMaterial(Integer.parseInt(rline)).toString().toLowerCase());
@@ -2031,7 +2033,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 							sells[1] = sells[1].replace("n", "");
 							sellUnit = "n";
 						}
-						if (isInt(buys[0]) && isInt(buys[1])){
+						if (MiscUtils.isInt(buys[0]) && MiscUtils.isInt(buys[1])){
 							if (Integer.parseInt(buys[0]) > 0 && Integer.parseInt(buys[1]) > 0)
 								validBuy = true;
 						}
@@ -2042,7 +2044,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 					if (sell.contains(";")){
 						sell = sell.replace(" ", "");
 						sells = sell.split(";");
-						if (isInt(sells[0]) && isInt(sells[1])){
+						if (MiscUtils.isInt(sells[0]) && MiscUtils.isInt(sells[1])){
 							if (Integer.parseInt(sells[0]) > 0 && Integer.parseInt(sells[1]) > 0)
 								validSell = true;
 						}
@@ -2052,7 +2054,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 					if (validBuy && validSell){
 						int dataNum = 0;
 						if (data != null){
-							if (isInt(data)){
+							if (MiscUtils.isInt(data)){
 								dataNum = Integer.parseInt(data);
 								if (mat.equalsIgnoreCase("Wool")){
 									if (dataNum == 0)
@@ -2218,138 +2220,6 @@ public class GoldBank extends JavaPlugin implements Listener {
 		}
 	}
 
-	// read the text file
-	public static String readFile(String fileName){
-		File file = new File(fileName);
-		char[] buffer = null;
-		try {
-			BufferedReader bufferedReader = new BufferedReader(
-					new FileReader(file));
-			buffer = new char[(int)file.length()];
-			int i = 0;
-			int c = bufferedReader.read();
-			while (c != -1){
-				buffer[i++] = (char)c;
-				c = bufferedReader.read();
-			}
-			bufferedReader.close();
-		}
-		catch (FileNotFoundException e){
-			e.printStackTrace();
-		}
-		catch (IOException e){
-			e.printStackTrace();
-		}
-		return new String(buffer);
-	}
-
-	// check amount of item in inventory
-	public static int getAmountInInv(Inventory inv, Material item, int damage){
-		ItemStack[] contents = inv.getContents();
-		int total = 0;
-		for (ItemStack slot : contents){
-			if (slot != null){
-				if (slot.getType() == item && (slot.getDurability() == damage) || damage < 0){
-					total = total + slot.getAmount();
-				}
-			}
-		}
-		return total;
-	}
-
-	public static int getAmountInInv(Inventory inv, Material item){
-		return getAmountInInv(inv, item, -1);
-	}
-
-	// check empty slots in inventory
-	public static int getNullsInInv(Inventory inv){
-		ItemStack[] contents = inv.getContents();
-		int total = 0;
-		for (ItemStack slot : contents){
-			if (slot == null){
-				total = total + 1;
-			}
-		}
-		return total;
-	}
-
-	// method to fill the inventories
-	public void fill(){
-		Connection conn = null;
-		Statement st = null;
-		ResultSet rs = null;
-		try {
-			Class.forName("org.sqlite.JDBC");
-			String dbPath = "jdbc:sqlite:" + plugin.getDataFolder() + File.separator + "chestdata.db";
-			conn = DriverManager.getConnection(dbPath);
-			st = conn.createStatement();
-			rs = st.executeQuery("SELECT * FROM chestdata");
-			while (rs.next()){
-				String p = rs.getString("username");
-				Player player = Bukkit.getServer().getPlayer(p);
-				File invF = new File(this.getDataFolder() + File.separator + "inventories" + File.separator + p + ".inv");
-				YamlConfiguration invY = new YamlConfiguration();
-				invY.load(invF);
-				int size = invY.getInt("size");
-				Set<String> keys = invY.getKeys(false);
-				ItemStack[] invI = new ItemStack[size];
-				for (String invN : keys){
-					if (!invN.equalsIgnoreCase("size")){
-						int i = Integer.parseInt(invN);
-						invI[i] =  invY.getItemStack(invN);
-					}
-				}
-				Inventory inv = this.getServer().createInventory(null, size, p + "'s GoldBank Sign");
-				inv.setContents(invI);
-				if (inv.contains(Material.GOLD_BLOCK) || inv.contains(Material.GOLD_INGOT) || inv.contains(Material.GOLD_NUGGET)){
-					int blocks = getAmountInInv(inv, Material.GOLD_BLOCK, -1);
-					int ingots = getAmountInInv(inv, Material.GOLD_INGOT, -1);
-					int nuggets = getAmountInInv(inv, Material.GOLD_NUGGET, -1);
-					int totalblocks = (blocks * 81);
-					int totalingots = (ingots * 9);
-					double total = (double)(totalblocks + totalingots + nuggets);
-					double rate = getConfig().getDouble("interest");
-					double doubleinterest = (total * rate);
-					int interest = (int)Math.round(doubleinterest);
-					int newBlocks = interest / 81;
-					int blockRemainder = interest - newBlocks * 81;
-					int newIngots = blockRemainder / 9;
-					int newNuggets = blockRemainder - newIngots * 9;
-					ItemStack addBlocks = new ItemStack(Material.GOLD_BLOCK, newBlocks);
-					ItemStack addIngots = new ItemStack(Material.GOLD_INGOT, newIngots);
-					ItemStack addNuggets = new ItemStack(Material.GOLD_NUGGET, newNuggets);
-					if (newBlocks != 0){
-						inv.addItem(addBlocks);
-					}
-					if (newIngots != 0){
-						inv.addItem(addIngots);
-					}
-					if (newNuggets != 0){
-						inv.addItem(addNuggets);
-					}
-					invY.load(invF);
-					for (int i = 0; i < inv.getSize(); i++){
-						invY.set("" + i, inv.getItem(i));
-					}
-					invY.save(invF);
-				}
-			}
-		}
-		catch (Exception e){
-			e.printStackTrace();
-		}
-		finally {
-			try {
-				conn.close();
-				st.close();
-				rs.close();
-			}
-			catch (Exception u){
-				u.printStackTrace();
-			}
-		}
-	}
-
 	// call the inventory filling function
 	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
 	public void onPlayerJoin(PlayerJoinEvent j) throws IOException {
@@ -2365,16 +2235,16 @@ public class GoldBank extends JavaPlugin implements Listener {
 		String check = "";
 		if (!invalidday){
 			check = getConfig().getString("dayofweek");
-			int daynum = checkDay(check);
+			int daynum = MiscUtils.checkDay(check);
 			if (dow == daynum){
 				File file = new File(getDataFolder(), "filled.txt");
-				String last = readFile(getDataFolder() + File.separator + "filled.txt");
+				String last = MiscUtils.readFile(getDataFolder() + File.separator + "filled.txt");
 				String fill;
 				fill = last.replaceAll("(\\r|\\n)", "");
 				int filled = Integer.parseInt(fill);
 				// Fill
 				if (filled == 0){
-					fill();
+					InventoryUtils.fill();
 					PrintWriter pw = new PrintWriter(file);
 					pw.print("1");
 					pw.close();
@@ -2382,12 +2252,12 @@ public class GoldBank extends JavaPlugin implements Listener {
 			}
 			if (dow == daynum + 2){
 				File file = new File(getDataFolder(), "filled.txt");
-				String last = readFile(getDataFolder() + File.separator + "filled.txt");
+				String last = MiscUtils.readFile(getDataFolder() + File.separator + "filled.txt");
 				String fill;
 				fill = last.replaceAll("(\\r|\\n)", "");
 				int filled = Integer.parseInt(fill);
 				if (filled == 1){
-					fill();
+					InventoryUtils.fill();
 					PrintWriter pw = new PrintWriter(file);
 					pw.print("0");
 					pw.close();
@@ -2493,7 +2363,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 							if (args[1].equalsIgnoreCase("view")){
 								if (sender.hasPermission("goldbank.wallet.view")){
 									String user = args[2];
-									if (isInt(args[3])){
+									if (MiscUtils.isInt(args[3])){
 										File invF = new File(getDataFolder() + File.separator + "wallets", user + ".inv");
 										if(invF.exists()){
 											YamlConfiguration invY = new YamlConfiguration();
@@ -2533,7 +2403,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 							// spawn
 							else if (args[1].equalsIgnoreCase("spawn")){
 								if (sender.hasPermission("goldbank.wallet.spawn")){
-									if (isInt(args[3])){
+									if (MiscUtils.isInt(args[3])){
 										ItemStack is = new ItemStack(Material.BOOK, 1);
 										ItemMeta meta = is.getItemMeta();
 										meta.setDisplayName("§2Wallet");
@@ -2593,7 +2463,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 									}
 									else if (args[2].equalsIgnoreCase("page")){
 										if (args.length >= 4){
-											if (isInt(args[3])){
+											if (MiscUtils.isInt(args[3])){
 												if (shopLog.containsKey(sender.getName())){
 													if (shopLog.get(sender.getName()) > 0){
 														int shopId = shopLog.get(sender.getName());
@@ -2716,45 +2586,6 @@ public class GoldBank extends JavaPlugin implements Listener {
 		return false;
 	}
 
-	// get the number of a day of the week
-	public static int checkDay(String day){
-		Map<String,Integer> mp=new HashMap<String,Integer>();
-		mp.put("Sunday",1);
-		mp.put("Monday",2);
-		mp.put("Tuesday",3);
-		mp.put("Wednesday",4);
-		mp.put("Thursday",5);
-		mp.put("Friday",6);
-		mp.put("Saturday",7);
-		return mp.get(day).intValue();
-	}
-	public boolean colExists(String table, String col){
-		Connection conn = null;
-		Statement st = null;
-		ResultSet rs = null;
-		try {
-			Class.forName("org.sqlite.JDBC");
-			String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "chestdata.db";
-			conn = DriverManager.getConnection(dbPath);
-			st = conn.createStatement();
-			rs = st.executeQuery("SELECT " + col + " FROM " + table + " LIMIT 1");
-			return true;
-		}
-		catch (Exception e){
-			return false;
-		}
-		finally {
-			try {
-				conn.close();
-				st.close();
-				rs.close();
-			}
-			catch (Exception n){
-				n.printStackTrace();
-			}
-		}
-	}
-
 	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
 	public void onInventoryClose(InventoryCloseEvent c){
 		boolean check = false;
@@ -2800,92 +2631,6 @@ public class GoldBank extends JavaPlugin implements Listener {
 				e.printStackTrace();
 			}
 		}
-	}
-
-	public boolean isInt(String i){
-		try {
-			Integer.parseInt(i);
-			return true;
-		}
-		catch(NumberFormatException nfe){
-			return false;
-		}
-	}
-
-	public boolean isMat(String m){
-		if (Material.getMaterial(m) != null)
-			return true;
-		else
-			return false;
-	}
-
-	public boolean isMat(int m){
-		if (Material.getMaterial(m) != null)
-			return true;
-		else
-			return false;
-	}
-
-	public boolean isBool(String b){
-		try {
-			Boolean.parseBoolean(b);
-			return true;
-		}
-		catch (Exception e){
-			e.printStackTrace();
-			return false;
-		}
-	}
-
-	public boolean charKeyExists(char[] array, int key){
-		try {
-			Character.toString(array[key]);
-			return true;
-		}
-		catch (Exception e){
-			return false;
-		}
-	}
-
-	public Block getAdjacentBlock(Block block, Material material){
-		BlockFace[] faces = new BlockFace[]{BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST, BlockFace.UP};
-		for (BlockFace face : faces){
-			Block adjBlock = block.getRelative(face);
-			if (adjBlock.getType() == material){
-				if (face != BlockFace.UP){
-					byte data = adjBlock.getData();
-					byte north = 0x2;
-					byte south = 0x3;
-					byte west = 0x4;
-					byte east = 0x5;
-					BlockFace attached = null;
-					if (data == east){
-						attached = BlockFace.WEST;
-					}
-					else if (data == west){
-						attached = BlockFace.EAST;
-					}
-					else if (data == north){
-						attached = BlockFace.SOUTH;
-					}
-					else if (data == south){
-						attached = BlockFace.NORTH;
-					}
-					if (adjBlock.getType() == Material.SIGN_POST){
-						attached = BlockFace.DOWN;
-					}
-					// I had to be a bit creative with the comparison...
-					if (block.getX() == adjBlock.getRelative(attached).getX() && block.getY() == 
-							adjBlock.getRelative(attached).getY() && block.getZ() == adjBlock.getRelative(attached).getZ()){
-						return adjBlock;
-					}
-				}
-				else if (material == Material.SIGN_POST){
-					return adjBlock;
-				}
-			}
-		}
-		return null;
 	}
 
 	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -3048,22 +2793,22 @@ public class GoldBank extends JavaPlugin implements Listener {
 				data = matInfo[1];
 			}
 			boolean isValidInt = false;
-			if (isInt(rline)){
-				if (isMat(Integer.parseInt(rline))){
+			if (MiscUtils.isInt(rline)){
+				if (MiscUtils.isMat(Integer.parseInt(rline))){
 					isValidInt = true;
 				}
 			}
-			if (isMat(rline) || isValidInt){
+			if (MiscUtils.isMat(rline) || isValidInt){
 				r.setCancelled(true);
 			}
 		}
-		if (getAdjacentBlock(block, Material.WALL_SIGN) != null || getAdjacentBlock(r.getBlock(), Material.SIGN_POST) != null){
+		if (MiscUtils.getAdjacentBlock(block, Material.WALL_SIGN) != null || MiscUtils.getAdjacentBlock(r.getBlock(), Material.SIGN_POST) != null){
 			Block adjblock = null;
-			if (getAdjacentBlock(block, Material.WALL_SIGN) != null){
-				adjblock = getAdjacentBlock(block, Material.WALL_SIGN);
+			if (MiscUtils.getAdjacentBlock(block, Material.WALL_SIGN) != null){
+				adjblock = MiscUtils.getAdjacentBlock(block, Material.WALL_SIGN);
 			}
-			else if (getAdjacentBlock(block, Material.SIGN_POST)!= null){
-				adjblock = getAdjacentBlock(block, Material.SIGN_POST);
+			else if (MiscUtils.getAdjacentBlock(block, Material.SIGN_POST)!= null){
+				adjblock = MiscUtils.getAdjacentBlock(block, Material.SIGN_POST);
 			}
 			Sign sign = (Sign)adjblock.getState();
 			if (sign.getLine(0).equalsIgnoreCase("§2[GoldBank]")){
@@ -3085,17 +2830,17 @@ public class GoldBank extends JavaPlugin implements Listener {
 				data = matInfo[1];
 			}
 			boolean isValidInt = false;
-			if (isInt(rline)){
-				if (isMat(Integer.parseInt(rline))){
+			if (MiscUtils.isInt(rline)){
+				if (MiscUtils.isMat(Integer.parseInt(rline))){
 					isValidInt = true;
 				}
 			}
-			if (isMat(rline) || isValidInt){
+			if (MiscUtils.isMat(rline) || isValidInt){
 				r.setCancelled(true);
 			}
 		}
-		else if (getAdjacentBlock(block, Material.SIGN_POST) != null){
-			Block adjblock = getAdjacentBlock(block, Material.SIGN_POST);
+		else if (MiscUtils.getAdjacentBlock(block, Material.SIGN_POST) != null){
+			Block adjblock = MiscUtils.getAdjacentBlock(block, Material.SIGN_POST);
 			Sign sign = (Sign)adjblock.getState();
 			if (sign.getLine(0).equalsIgnoreCase("§2[GoldBank]")){
 				r.setCancelled(true);
@@ -3116,20 +2861,15 @@ public class GoldBank extends JavaPlugin implements Listener {
 				data = matInfo[1];
 			}
 			boolean isValidInt = false;
-			if (isInt(rline)){
-				if (isMat(Integer.parseInt(rline))){
+			if (MiscUtils.isInt(rline)){
+				if (MiscUtils.isMat(Integer.parseInt(rline))){
 					isValidInt = true;
 				}
 			}
-			if (isMat(rline) || isValidInt){
+			if (MiscUtils.isMat(rline) || isValidInt){
 				r.setCancelled(true);
 			}
 		}
-	}
-
-	public String escape(String s){
-		s = s.replace("'", "''");
-		return s;
 	}
 
 	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -3263,37 +3003,5 @@ public class GoldBank extends JavaPlugin implements Listener {
 				}
 			}
 		}
-	}
-
-	public static void removeFromInv(Inventory inv, Material mat, int dmgValue, int amount){
-		if(inv.contains(mat)){
-			int remaining = amount;
-			ItemStack[] contents = inv.getContents();
-			for (ItemStack is : contents){
-				if (is != null){
-					if (is.getType() == mat){
-						if (is.getDurability() == dmgValue || dmgValue <= 0){
-							if(is.getAmount() > remaining){
-								is.setAmount(is.getAmount() - remaining);
-								remaining = 0;
-							}
-							else if(is.getAmount() <= remaining){
-								if (remaining > 0){
-									remaining -= is.getAmount();
-									is.setType(Material.AIR);
-								}
-							}
-						}
-					}
-				}
-			}
-			inv.setContents(contents);
-		}
-	}
-
-	@SuppressWarnings("deprecation")
-	public static void removeFromPlayerInv(Player p, Material mat, int dmgValue, int amount){
-		removeFromInv(p.getInventory(), mat, dmgValue, amount);
-		p.updateInventory();
 	}
 }

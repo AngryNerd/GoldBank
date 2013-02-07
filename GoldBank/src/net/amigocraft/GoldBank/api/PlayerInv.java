@@ -3,6 +3,7 @@ package net.amigocraft.GoldBank.api;
 import java.util.HashMap;
 
 import net.amigocraft.GoldBank.GoldBank;
+import net.amigocraft.GoldBank.util.InventoryUtils;
 
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -42,7 +43,7 @@ public class PlayerInv extends JavaPlugin {
 	@SuppressWarnings("deprecation")
 	public static boolean addGoldToPlayerInv(Player p, int amount){
 		Inventory inv = p.getInventory();
-		Inventory newInv = GoldBank.plugin.getServer().createInventory(null, inv.getSize());
+		Inventory newInv = InventoryUtils.plugin.getServer().createInventory(null, inv.getSize());
 		newInv.setContents(inv.getContents());
 		int block = 0;
 		int ingot = 0;
@@ -94,13 +95,13 @@ public class PlayerInv extends JavaPlugin {
 		if (total >= amount){
 			int remaining = amount;
 			// remove blocks
-			int blocks = GoldBank.getAmountInInv(p.getInventory(), Material.GOLD_BLOCK);
+			int blocks = InventoryUtils.getAmountInInv(p.getInventory(), Material.GOLD_BLOCK);
 			if (blocks > 0 && remaining / 81 > 0){
 				if (blocks >= remaining / 81){
-					GoldBank.removeFromPlayerInv(p, Material.GOLD_BLOCK, 0, remaining / 81);
+					InventoryUtils.removeFromPlayerInv(p, Material.GOLD_BLOCK, 0, remaining / 81);
 					remaining -= (remaining / 81) * 81;
-					if (GoldBank.getAmountInInv(p.getInventory(), Material.GOLD_BLOCK) > 0 && remaining > 0){
-						GoldBank.removeFromPlayerInv(p, Material.GOLD_BLOCK, 0, 1);
+					if (InventoryUtils.getAmountInInv(p.getInventory(), Material.GOLD_BLOCK) > 0 && remaining > 0){
+						InventoryUtils.removeFromPlayerInv(p, Material.GOLD_BLOCK, 0, 1);
 						addGoldToPlayerInv(p, 81 - remaining);
 						GoldBank.log.info("blocks");
 						GoldBank.log.info(Integer.toString(remaining));
@@ -108,18 +109,18 @@ public class PlayerInv extends JavaPlugin {
 					}
 				}
 				else {
-					GoldBank.removeFromPlayerInv(p, Material.GOLD_BLOCK, 0, blocks);
+					InventoryUtils.removeFromPlayerInv(p, Material.GOLD_BLOCK, 0, blocks);
 					remaining -= blocks * 81;
 				}
 			}
 			// remove ingots
-			int ingots = GoldBank.getAmountInInv(p.getInventory(), Material.GOLD_INGOT);
+			int ingots = InventoryUtils.getAmountInInv(p.getInventory(), Material.GOLD_INGOT);
 			if (ingots > 0 && remaining / 9 > 0){
 				if (ingots >= remaining / 9){
-					GoldBank.removeFromPlayerInv(p, Material.GOLD_INGOT, 0, remaining / 9);
+					InventoryUtils.removeFromPlayerInv(p, Material.GOLD_INGOT, 0, remaining / 9);
 					remaining -= (remaining / 9) * 9;
-					if (GoldBank.getAmountInInv(p.getInventory(), Material.GOLD_INGOT) > 0 && remaining > 0){
-						GoldBank.removeFromPlayerInv(p, Material.GOLD_INGOT, 0, 1);
+					if (InventoryUtils.getAmountInInv(p.getInventory(), Material.GOLD_INGOT) > 0 && remaining > 0){
+						InventoryUtils.removeFromPlayerInv(p, Material.GOLD_INGOT, 0, 1);
 						addGoldToPlayerInv(p, 9 - remaining);
 						GoldBank.log.info("ingots");
 						GoldBank.log.info(Integer.toString(remaining));
@@ -127,20 +128,20 @@ public class PlayerInv extends JavaPlugin {
 					}
 				}
 				else {
-					GoldBank.removeFromPlayerInv(p, Material.GOLD_INGOT, 0, ingots);
+					InventoryUtils.removeFromPlayerInv(p, Material.GOLD_INGOT, 0, ingots);
 					remaining -= ingots * 9;
 				}
 			}
 			// remove nuggets
-			int nuggets = GoldBank.getAmountInInv(p.getInventory(), Material.GOLD_NUGGET);
+			int nuggets = InventoryUtils.getAmountInInv(p.getInventory(), Material.GOLD_NUGGET);
 			if (nuggets > 0 && remaining > 0){
 				if (nuggets > remaining){
-					GoldBank.removeFromPlayerInv(p, Material.GOLD_NUGGET, 0, remaining);
+					InventoryUtils.removeFromPlayerInv(p, Material.GOLD_NUGGET, 0, remaining);
 					remaining = 0;
 				}
 				else {
 					// I don't think this is possible, but just in case ;)
-					GoldBank.removeFromPlayerInv(p, Material.GOLD_NUGGET, 0, nuggets);
+					InventoryUtils.removeFromPlayerInv(p, Material.GOLD_NUGGET, 0, nuggets);
 					remaining -= nuggets;
 				}
 			}

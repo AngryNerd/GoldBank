@@ -4,6 +4,7 @@ import java.io.File;
 import java.util.HashMap;
 
 import net.amigocraft.GoldBank.GoldBank;
+import net.amigocraft.GoldBank.util.InventoryUtils;
 
 import org.bukkit.Material;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -21,7 +22,7 @@ public class WalletInv {
 	 * @return The amount of gold (in nuggets) contained by the specified player's given wallet inventory. Note: this method will return -1 if the player's given wallet inventory cannot be loaded.
 	 */
 	public static int getGoldInWalletInv(String p, int walletIndex){
-		File invf = new File(GoldBank.plugin.getDataFolder() + File.separator + "wallets", p + ".inv");
+		File invf = new File(InventoryUtils.plugin.getDataFolder() + File.separator + "wallets", p + ".inv");
 		if(invf.exists()){
 			YamlConfiguration invY = new YamlConfiguration();
 			try {
@@ -66,7 +67,7 @@ public class WalletInv {
 	 * @return Whether or not the gold was successfully added (returns false if not enough space is available or the player's given wallet inventory could not be loaded).
 	 */
 	public static boolean addGoldToWalletInv(String p, int walletIndex, int amount){
-		File invF = new File(GoldBank.plugin.getDataFolder() + File.separator + "inventories", p + ".inv");
+		File invF = new File(InventoryUtils.plugin.getDataFolder() + File.separator + "inventories", p + ".inv");
 		if(invF.exists()){
 			YamlConfiguration invY = new YamlConfiguration();
 			try {
@@ -78,7 +79,7 @@ public class WalletInv {
 				}
 				Inventory inv = plugin.getServer().createInventory(null, size);
 				inv.setContents(invI);
-				Inventory newInv = GoldBank.plugin.getServer().createInventory(null, inv.getSize());
+				Inventory newInv = InventoryUtils.plugin.getServer().createInventory(null, inv.getSize());
 				newInv.setContents(inv.getContents());
 				int block = 0;
 				int ingot = 0;
@@ -136,7 +137,7 @@ public class WalletInv {
 		int total = getGoldInWalletInv(p, walletIndex);
 		if (total != -1){
 			if (total >= amount){
-				File invF = new File(GoldBank.plugin.getDataFolder() + File.separator + "wallets", p + ".inv");
+				File invF = new File(InventoryUtils.plugin.getDataFolder() + File.separator + "wallets", p + ".inv");
 				if(invF.exists()){
 					YamlConfiguration invY = new YamlConfiguration();
 					try {
@@ -150,48 +151,48 @@ public class WalletInv {
 						inv.setContents(invI);
 						int remaining = amount;
 						// remove blocks
-						int blocks = GoldBank.getAmountInInv(inv, Material.GOLD_BLOCK);
+						int blocks = InventoryUtils.getAmountInInv(inv, Material.GOLD_BLOCK);
 						if (blocks > 0 && remaining / 81 > 0){
 							if (blocks >= remaining / 81){
-								GoldBank.removeFromInv(inv, Material.GOLD_BLOCK, 0, remaining / 81);
+								InventoryUtils.removeFromInv(inv, Material.GOLD_BLOCK, 0, remaining / 81);
 								remaining -= (remaining / 81) * 81;
-								if (GoldBank.getAmountInInv(inv, Material.GOLD_BLOCK) > 0 && remaining > 0){
-									GoldBank.removeFromInv(inv, Material.GOLD_BLOCK, 0, 1);
+								if (InventoryUtils.getAmountInInv(inv, Material.GOLD_BLOCK) > 0 && remaining > 0){
+									InventoryUtils.removeFromInv(inv, Material.GOLD_BLOCK, 0, 1);
 									addGoldToWalletInv(p, walletIndex, 81 - remaining);
 									remaining = 0;
 								}
 							}
 							else {
-								GoldBank.removeFromInv(inv, Material.GOLD_BLOCK, 0, blocks);
+								InventoryUtils.removeFromInv(inv, Material.GOLD_BLOCK, 0, blocks);
 								remaining -= blocks * 81;
 							}
 						}
 						// remove ingots
-						int ingots = GoldBank.getAmountInInv(inv, Material.GOLD_INGOT);
+						int ingots = InventoryUtils.getAmountInInv(inv, Material.GOLD_INGOT);
 						if (ingots > 0 && remaining / 9 > 0){
 							if (ingots >= remaining / 9){
-								GoldBank.removeFromInv(inv, Material.GOLD_INGOT, 0, remaining / 9);
-								if (GoldBank.getAmountInInv(inv, Material.GOLD_INGOT) > 0 && remaining > 0){
-									GoldBank.removeFromInv(inv, Material.GOLD_INGOT, 0, 1);
+								InventoryUtils.removeFromInv(inv, Material.GOLD_INGOT, 0, remaining / 9);
+								if (InventoryUtils.getAmountInInv(inv, Material.GOLD_INGOT) > 0 && remaining > 0){
+									InventoryUtils.removeFromInv(inv, Material.GOLD_INGOT, 0, 1);
 									addGoldToWalletInv(p, walletIndex, 9 - remaining);
 									remaining = 0;
 								}
 							}
 							else {
-								GoldBank.removeFromInv(inv, Material.GOLD_INGOT, 0, ingots);
+								InventoryUtils.removeFromInv(inv, Material.GOLD_INGOT, 0, ingots);
 								remaining -= ingots * 9;
 							}
 						}
 						// remove nuggets
-						int nuggets = GoldBank.getAmountInInv(inv, Material.GOLD_NUGGET);
+						int nuggets = InventoryUtils.getAmountInInv(inv, Material.GOLD_NUGGET);
 						if (nuggets > 0 && remaining > 0){
 							if (nuggets > remaining){
-								GoldBank.removeFromInv(inv, Material.GOLD_NUGGET, 0, remaining);
+								InventoryUtils.removeFromInv(inv, Material.GOLD_NUGGET, 0, remaining);
 								remaining = 0;
 							}
 							else {
 								// I don't think this is possible, but just in case ;)
-								GoldBank.removeFromInv(inv, Material.GOLD_NUGGET, 0, nuggets);
+								InventoryUtils.removeFromInv(inv, Material.GOLD_NUGGET, 0, nuggets);
 								remaining -= nuggets;
 							}
 						}
