@@ -101,7 +101,7 @@ public class InventoryUtils {
 		int total = 0;
 		for (ItemStack slot : contents){
 			if (slot != null){
-				if (slot.getType() == item && (slot.getDurability() == damage) || damage < 0){
+				if (slot.getType() == item && (slot.getDurability() == damage || damage < 0)){
 					total = total + slot.getAmount();
 				}
 			}
