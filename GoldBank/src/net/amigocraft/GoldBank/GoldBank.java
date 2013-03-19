@@ -937,25 +937,25 @@ public class GoldBank extends JavaPlugin implements Listener {
 																	int newIngots = remainder / 9;
 																	remainder -= newIngots * 9;
 																	int newNuggets = remainder;
-																	log.info(Integer.toString(newNuggets));
 																	ItemStack addBlocks = new ItemStack(Material.GOLD_BLOCK, newBlocks);
 																	ItemStack addIngots = new ItemStack(Material.GOLD_INGOT, newIngots);
 																	ItemStack addNuggets = new ItemStack(Material.GOLD_NUGGET, newNuggets);
 																	if (addBlocks.getAmount() > 0)
 																		chestInv.addItem(new ItemStack[] {
 																				addBlocks});
-																	if (addIngots.getAmount() > 0)
+																	if (addIngots.getAmount() > 0){
 																		chestInv.addItem(new ItemStack[] {
 																				addIngots});
+																	}
 																	if (addNuggets.getAmount() > 0)
 																		chestInv.addItem(new ItemStack[] {
 																				addNuggets});
 																	if (InventoryUtils.getAmountInInv(chestInv, Material.GOLD_NUGGET) >= 9){
-																		int extraNuggets = InventoryUtils.getAmountInInv(chestInv, Material.GOLD_INGOT, -1);
-																		int ingotNum = extraNuggets / 9;
-																		InventoryUtils.removeFromInv(chestInv, Material.GOLD_NUGGET, 0, ingotNum * 9);
+																		int extraNuggets = InventoryUtils.getAmountInInv(chestInv, Material.GOLD_NUGGET, -1);
+																		int nuggetNum = (extraNuggets / 9) * 9;
+																		InventoryUtils.removeFromInv(chestInv, Material.GOLD_NUGGET, 0, nuggetNum);
 																		chestInv.addItem(new ItemStack[] {
-																				new ItemStack(Material.GOLD_INGOT, ingotNum)});
+																				new ItemStack(Material.GOLD_INGOT, nuggetNum / 9)});
 																	}
 																	if (InventoryUtils.getAmountInInv(chestInv, Material.GOLD_INGOT) >= 9){
 																		int extraIngots = InventoryUtils.getAmountInInv(chestInv, Material.GOLD_INGOT, -1);
@@ -969,7 +969,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 																player.updateInventory();
 																st.executeUpdate("INSERT INTO shoplog (shop, player, action, material, data, quantity, time) VALUES ('" + shopId + "', '" + player.getName() + "', '0', '" + mat.getId() + "', '" + dataValue + "', '" + buyIs.getAmount() + "', '" + System.currentTimeMillis() / 1000 + "')");
 																String buyPriceS = "s";
-																if (buyPrice == 1)
+																if (buyPrice / buyMult == 1)
 																	buyPriceS = "";
 																String unit = "nugget";
 																if (buyUnit.equals("b"))
@@ -1099,17 +1099,38 @@ public class GoldBank extends JavaPlugin implements Listener {
 																	}
 																	chestInv.addItem(new ItemStack[] {sellIs});
 																}
-																inv.addItem(new ItemStack[] {
-																		new ItemStack(Material.GOLD_INGOT, sellPrice)});
+																int remainder = sellPrice;
+																int newBlocks = remainder / 81;
+																remainder -= newBlocks * 81;
+																int newIngots = remainder / 9;
+																remainder -= newIngots * 9;
+																int newNuggets = remainder;
+																ItemStack addBlocks = new ItemStack(Material.GOLD_BLOCK, newBlocks);
+																ItemStack addIngots = new ItemStack(Material.GOLD_INGOT, newIngots);
+																ItemStack addNuggets = new ItemStack(Material.GOLD_NUGGET, newNuggets);
+																if (addBlocks.getAmount() > 0)
+																	inv.addItem(new ItemStack[] {
+																			addBlocks});
+																if (addIngots.getAmount() > 0)
+																	inv.addItem(new ItemStack[] {
+																			addIngots});
+																if (addNuggets.getAmount() > 0)
+																	inv.addItem(new ItemStack[] {
+																			addNuggets});
 																player.updateInventory();
 																st.executeUpdate("INSERT INTO shoplog (shop, player, action, material, data, quantity, time) VALUES ('" + shopId + "', '" + player.getName() + "', '1', '" + mat.getId() + "', '" + dataValue + "', '" + sellIs.getAmount() + "', '" + System.currentTimeMillis() / 1000 + "')");
 																String sellAmountS = "s";
 																if (sellAmount == 1)
 																	sellAmountS = "";
 																String sellPriceS = "s";
-																if (sellPrice == 1)
+																if (sellPrice / sellMult == 1)
 																	sellPriceS = "";
-																player.sendMessage(ChatColor.DARK_PURPLE + "You sold " + sellAmount + " " + forMatName + sellAmountS + " for " + sellPrice + " golden ingot" + sellPriceS + "!");
+																String unit = "nugget";
+																if (sellUnit.equals("b"))
+																	unit = "block";
+																else if (sellUnit.equals("i"))
+																	unit = "ingot";
+																player.sendMessage(ChatColor.DARK_PURPLE + "You sold " + sellAmount + " " + forMatName + sellAmountS + " for " + sellPrice + " golden " + unit + sellPriceS + "!");
 															}
 															else
 																player.sendMessage(ChatColor.RED + "You do not have enough " + forMatName + "!");
@@ -3019,4 +3040,6 @@ public class GoldBank extends JavaPlugin implements Listener {
 			}
 		}
 	}
+	
+	//TODO protect GoldShops from hoppers
 }
