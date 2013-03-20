@@ -109,6 +109,9 @@ public class GoldBank extends JavaPlugin implements Listener {
 	@Override
 	public void onEnable(){
 
+		if (!getServer().getOnlineMode())
+			log.warning(ANSI_RED + "[GoldBank] This plugin does not support offline servers! Disabling..." + ANSI_WHITE);
+		
 		// autoupdate
 		if (getConfig().getBoolean("enable-auto-update")){
 			try {new AutoUpdate(this);}
