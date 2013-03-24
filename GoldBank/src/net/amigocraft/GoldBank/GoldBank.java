@@ -1144,9 +1144,6 @@ public class GoldBank extends JavaPlugin implements Listener {
 																				addNuggets});
 																	player.updateInventory();
 																	st.executeUpdate("INSERT INTO shoplog (shop, player, action, material, data, quantity, time) VALUES ('" + shopId + "', '" + player.getName() + "', '1', '" + mat.getId() + "', '" + dataValue + "', '" + sellIs.getAmount() + "', '" + System.currentTimeMillis() / 1000 + "')");
-																	String sellAmountS = "s";
-																	if (sellAmount == 1)
-																		sellAmountS = "";
 																	String sellPriceS = "s";
 																	if (sellPrice / sellMult == 1)
 																		sellPriceS = "";
@@ -1155,7 +1152,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 																		unit = "block";
 																	else if (sellUnit.equals("i"))
 																		unit = "ingot";
-																	player.sendMessage(ChatColor.DARK_PURPLE + "You sold " + sellAmount + " " + forMatName + sellAmountS + " for " + sellPrice + " golden " + unit + sellPriceS + "!");
+																	player.sendMessage(ChatColor.DARK_PURPLE + "You sold " + sellAmount + " " + forMatName + " for " + (sellPrice / sellMult) + " golden " + unit + sellPriceS + "!");
 																}
 																else
 																	player.sendMessage(ChatColor.RED + "You do not have enough " + forMatName + "!");
