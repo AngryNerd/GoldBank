@@ -24,6 +24,8 @@ public class InventoryUtils {
 		Connection conn = null;
 		Statement st = null;
 		ResultSet rs = null;
+		int success = 0;
+		int failed = 0;
 		try {
 			Class.forName("org.sqlite.JDBC");
 			String dbPath = "jdbc:sqlite:" + plugin.getDataFolder() + File.separator + "chestdata.db";
@@ -32,56 +34,60 @@ public class InventoryUtils {
 			rs = st.executeQuery("SELECT * FROM chestdata");
 			while (rs.next()){
 				String p = rs.getString("username");
-				File invF = new File(plugin.getDataFolder() + File.separator + "inventories" + File.separator + p + ".inv");
-				YamlConfiguration invY = new YamlConfiguration();
-				invY.load(invF);
-				int size = invY.getInt("size");
-				Set<String> keys = invY.getKeys(false);
-				ItemStack[] invI = new ItemStack[size];
-				for (String invN : keys){
-					if (!invN.equalsIgnoreCase("size")){
-						int i = Integer.parseInt(invN);
-						invI[i] =  invY.getItemStack(invN);
-					}
-				}
-				Inventory inv = plugin.getServer().createInventory(null, size, p + "'s GoldBank Sign");
-				inv.setContents(invI);
-				if (inv.contains(Material.GOLD_BLOCK) || inv.contains(Material.GOLD_INGOT) || inv.contains(Material.GOLD_NUGGET)){
-					int blocks = getAmountInInv(inv, Material.GOLD_BLOCK, -1);
-					int ingots = getAmountInInv(inv, Material.GOLD_INGOT, -1);
-					int nuggets = getAmountInInv(inv, Material.GOLD_NUGGET, -1);
-					int totalblocks = (blocks * 81);
-					int totalingots = (ingots * 9);
-					double total = (double)(totalblocks + totalingots + nuggets);
-					double rate = plugin.getConfig().getDouble("interest");
-					double doubleinterest = (total * rate);
-					int interest = (int)Math.round(doubleinterest);
-					int newBlocks = interest / 81;
-					int blockRemainder = interest - newBlocks * 81;
-					int newIngots = blockRemainder / 9;
-					int newNuggets = blockRemainder - newIngots * 9;
-					ItemStack addBlocks = new ItemStack(Material.GOLD_BLOCK, newBlocks);
-					ItemStack addIngots = new ItemStack(Material.GOLD_INGOT, newIngots);
-					ItemStack addNuggets = new ItemStack(Material.GOLD_NUGGET, newNuggets);
-					if (newBlocks != 0){
-						inv.addItem(addBlocks);
-					}
-					if (newIngots != 0){
-						inv.addItem(addIngots);
-					}
-					if (newNuggets != 0){
-						inv.addItem(addNuggets);
-					}
+				if (!p.equals("MASTER")){
+					File invF = new File(plugin.getDataFolder() + File.separator + "inventories" + File.separator + p + ".inv");
+					YamlConfiguration invY = new YamlConfiguration();
 					invY.load(invF);
-					for (int i = 0; i < inv.getSize(); i++){
-						invY.set("" + i, inv.getItem(i));
+					int size = invY.getInt("size");
+					Set<String> keys = invY.getKeys(false);
+					ItemStack[] invI = new ItemStack[size];
+					for (String invN : keys){
+						if (!invN.equalsIgnoreCase("size")){
+							int i = Integer.parseInt(invN);
+							invI[i] =  invY.getItemStack(invN);
+						}
 					}
-					invY.save(invF);
+					Inventory inv = plugin.getServer().createInventory(null, size, p + "'s GoldBank Sign");
+					inv.setContents(invI);
+					if (inv.contains(Material.GOLD_BLOCK) || inv.contains(Material.GOLD_INGOT) || inv.contains(Material.GOLD_NUGGET)){
+						int blocks = getAmountInInv(inv, Material.GOLD_BLOCK, -1);
+						int ingots = getAmountInInv(inv, Material.GOLD_INGOT, -1);
+						int nuggets = getAmountInInv(inv, Material.GOLD_NUGGET, -1);
+						int totalblocks = (blocks * 81);
+						int totalingots = (ingots * 9);
+						double total = (double)(totalblocks + totalingots + nuggets);
+						double rate = plugin.getConfig().getDouble("interest");
+						double doubleinterest = (total * rate);
+						int interest = (int)Math.round(doubleinterest);
+						int newBlocks = interest / 81;
+						int blockRemainder = interest - newBlocks * 81;
+						int newIngots = blockRemainder / 9;
+						int newNuggets = blockRemainder - newIngots * 9;
+						ItemStack addBlocks = new ItemStack(Material.GOLD_BLOCK, newBlocks);
+						ItemStack addIngots = new ItemStack(Material.GOLD_INGOT, newIngots);
+						ItemStack addNuggets = new ItemStack(Material.GOLD_NUGGET, newNuggets);
+						if (newBlocks != 0){
+							inv.addItem(addBlocks);
+						}
+						if (newIngots != 0){
+							inv.addItem(addIngots);
+						}
+						if (newNuggets != 0){
+							inv.addItem(addNuggets);
+						}
+						invY.load(invF);
+						for (int i = 0; i < inv.getSize(); i++){
+							invY.set("" + i, inv.getItem(i));
+						}
+						invY.save(invF);
+					}
+					success += 1;
 				}
 			}
 		}
 		catch (Exception e){
 			e.printStackTrace();
+			failed += 1;
 		}
 		finally {
 			try {
@@ -93,6 +99,7 @@ public class InventoryUtils {
 				u.printStackTrace();
 			}
 		}
+		GoldBank.log.info(GoldBank.ANSI_GREEN + "[GoldBank] Successfully allocated interest to " + success + " chests. Failed to add interest to " + failed + " chests." + GoldBank.ANSI_WHITE);
 	}
 
 	// check amount of item in inventory
