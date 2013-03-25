@@ -29,7 +29,9 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.logging.Logger;
 
+import net.amigocraft.GoldBank.economy.VaultConnector;
 import net.amigocraft.GoldBank.util.*;
+import net.milkbowl.vault.economy.Economy;
 
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.lang.WordUtils;
@@ -88,6 +90,8 @@ import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.material.MaterialData;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.metadata.MetadataValue;
+import org.bukkit.plugin.ServicePriority;
+import org.bukkit.plugin.ServicesManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 
@@ -111,7 +115,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 
 		if (!getServer().getOnlineMode())
 			log.warning(ANSI_RED + "[GoldBank] This plugin does not support offline servers! Disabling..." + ANSI_WHITE);
-		
+
 		// autoupdate
 		if (getConfig().getBoolean("enable-auto-update")){
 			try {new AutoUpdate(this);}
@@ -124,12 +128,24 @@ public class GoldBank extends JavaPlugin implements Listener {
 				Metrics metrics = new Metrics(this);
 				metrics.start();
 			}
-			catch (IOException e) {log.warning("[GoldBank] Failed to submit statistics to Plugin Metrics");}
+			catch (IOException e) {log.warning(ANSI_RED + "[GoldBank] Failed to submit statistics to Plugin Metrics" + ANSI_WHITE);}
 		}
 
 		// register events and the plugin variable
 		getServer().getPluginManager().registerEvents(this, this);
 		GoldBank.plugin = this;
+
+		// register economy with Vault
+		if (getServer().getPluginManager().getPlugin("Vault") != null){
+			final ServicesManager sm = getServer().getServicesManager();
+			sm.register(Economy.class, new VaultConnector(), this, ServicePriority.Highest);
+			log.info(ANSI_GREEN + "[GoldBank] Registered Vault interface." + ANSI_WHITE);
+		}
+		else {
+			log.info(ANSI_RED + "[GoldBank] Vault not found. Other plugins may not be able to access GoldBank accounts." + ANSI_WHITE);
+		}
+
+		// initialize wallet arrays
 
 		for (int i = 0; i < 256; i++){
 			openPlayer[i] = null;
