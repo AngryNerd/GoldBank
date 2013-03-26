@@ -509,15 +509,17 @@ public class GoldBank extends JavaPlugin implements Listener {
 	public void onOneClick(PlayerInteractEvent e){
 		// this code is here to prevent bugs when clicking a bank sign with a wallet
 		boolean wallet = false;
-		if (e.getPlayer().getItemInHand().getType() == Material.BOOK){
-			ItemStack is = e.getPlayer().getItemInHand();
-			ItemMeta meta = is.getItemMeta();
-			if (!(meta.getDisplayName() == null) && meta.getLore() != null){
-				if (meta.getLore().size() >= 4){
-					if (meta.getDisplayName().equals("§2Wallet") && meta.getLore().get(3).equals("§2GoldBank")){
-						// cancel the event because the item in hand is a wallet
-						e.setCancelled(true);
-						wallet = true;
+		if (e.getAction() == Action.LEFT_CLICK_BLOCK || e.getAction() == Action.LEFT_CLICK_AIR || e.getAction() == Action.RIGHT_CLICK_BLOCK || e.getAction() == Action.RIGHT_CLICK_AIR){
+			if (e.getPlayer().getItemInHand().getType() == Material.BOOK){
+				ItemStack is = e.getPlayer().getItemInHand();
+				ItemMeta meta = is.getItemMeta();
+				if (!(meta.getDisplayName() == null) && meta.getLore() != null){
+					if (meta.getLore().size() >= 4){
+						if (meta.getDisplayName().equals("§2Wallet") && meta.getLore().get(3).equals("§2GoldBank")){
+							// cancel the event because the item in hand is a wallet
+							e.setCancelled(true);
+							wallet = true;
+						}
 					}
 				}
 			}
@@ -966,8 +968,10 @@ public class GoldBank extends JavaPlugin implements Listener {
 																			new ItemStack(Material.GOLD_INGOT, 9 - (remaining * 9))});
 																	remaining = 0;
 																}
-																if (remaining >= 1){
-																	InventoryUtils.removeFromPlayerInv(player, Material.GOLD_NUGGET, 0, remaining);
+																if (remaining >= 1 && InventoryUtils.getAmountInInv(player.getInventory(), Material.GOLD_INGOT) >= 1){
+																	InventoryUtils.removeFromPlayerInv(player, Material.GOLD_INGOT, 0, 1);
+																	player.getInventory().addItem(new ItemStack(Material.GOLD_NUGGET, 9 - remaining));
+																	remaining = 0;
 																}
 																if (!admin){
 																	InventoryUtils.removeFromInv(chestInv, buyIs.getType(), 0, buyIs.getAmount());
