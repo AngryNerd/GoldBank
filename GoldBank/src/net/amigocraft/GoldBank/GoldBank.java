@@ -76,6 +76,7 @@ import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.inventory.CraftItemEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.InventoryMoveItemEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.inventory.PrepareItemCraftEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -3094,5 +3095,45 @@ public class GoldBank extends JavaPlugin implements Listener {
 		}
 	}
 
-	//TODO protect GoldShops from hoppers
+	@EventHandler
+	public void onInventoryMoveItem(InventoryMoveItemEvent e){
+		if (e.getSource().getType() == InventoryType.CHEST){
+			if (e.getSource().getHolder() != null){
+				Block chest = ((Chest)e.getSource().getHolder()).getBlock();
+				Location l = chest.getLocation();
+				l.setY(l.getY() + 1);
+				if (l.getBlock().getType() == Material.WALL_SIGN){
+					Connection conn = null;
+					Statement st = null;
+					ResultSet rs = null;
+					int i = 0;
+					try {
+						Class.forName("org.sqlite.JDBC");
+						String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "chestdata.db";
+						conn = DriverManager.getConnection(dbPath);
+						st = conn.createStatement();
+						rs = st.executeQuery("SELECT COUNT(*) FROM shops WHERE world = '" + l.getWorld().getName() + "' AND x = '" + l.getX() + "' AND y = '" + l.getY() + "' AND z = '" + l.getZ() + "'");
+						while (rs.next()){
+							i = rs.getInt(1);
+						}
+					}
+					catch (Exception q){
+						q.printStackTrace();
+					}
+					finally {
+						try {
+							conn.close();
+							st.close();
+							rs.close();
+						}
+						catch (Exception k){
+							k.printStackTrace();
+						}
+					}
+					if (i > 0)
+						e.setCancelled(true);
+				}
+			}
+		}
+	}
 }
