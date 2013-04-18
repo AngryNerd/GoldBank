@@ -19,7 +19,7 @@ public class BankInv {
 	/**
 	 * Attempts to get the amount of gold in a specified player's bank inventory.
 	 * @param p The player who's bank inventory should be searched.
-	 * @return The amount of gold (in nuggets) contained by the specified player's bank inventory. Note: this method will return -1 if the player's bank inventory cannot be loaded.
+	 * @return The amount of gold (in nuggets) contained by the specified player's bank inventory. Note: this method will return 0 if the player's bank inventory cannot be loaded.
 	 */
 	public static int getGoldInBankInv(String p){
 		File invf = new File(InventoryUtils.plugin.getDataFolder() + File.separator + "inventories", p + ".inv");
