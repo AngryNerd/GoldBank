@@ -156,5 +156,35 @@ public class VaultConnector implements Economy {
 		else
 			return new EconomyResponse(0, 0, ResponseType.FAILURE, "Failed to withdraw " + amount + " gold from " + player + "'s GoldBank account");
 	}
+
+	@Override
+	public boolean createPlayerAccount(String player, String world){
+		return createPlayerAccount(player);
+	}
+
+	@Override
+	public EconomyResponse depositPlayer(String player, String world, double amount){
+		return depositPlayer(player, amount);
+	}
+
+	@Override
+	public double getBalance(String player, String world){
+		return getBalance(player);
+	}
+
+	@Override
+	public boolean has(String player, String world, double amount){
+		return has(player, amount);
+	}
+
+	@Override
+	public boolean hasAccount(String player, String world){
+		return hasAccount(player);
+	}
+
+	@Override
+	public EconomyResponse withdrawPlayer(String player, String world, double amount){
+		return withdrawPlayer(player, amount);
+	}
 	
 }

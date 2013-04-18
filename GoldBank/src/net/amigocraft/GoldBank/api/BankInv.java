@@ -53,11 +53,11 @@ public class BankInv {
 			}
 			catch (Exception ex){
 				ex.printStackTrace();
-				return -1;
+				return 0;
 			}
 		}
 		else
-			return -1;
+			return 0;
 	}
 
 	/**
