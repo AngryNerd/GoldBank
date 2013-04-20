@@ -1,5 +1,5 @@
 name: GoldBank
-version: 2.5 Beta
+version: 2.5
 main: net.amigocraft.GoldBank.GoldBank
 commands:
   gb:
