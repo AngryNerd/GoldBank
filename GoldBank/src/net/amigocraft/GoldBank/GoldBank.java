@@ -114,8 +114,16 @@ public class GoldBank extends JavaPlugin implements Listener {
 	@Override
 	public void onEnable(){
 
-		if (!getServer().getOnlineMode())
-			log.warning(ANSI_RED + "[GoldBank] This plugin does not support offline servers! Disabling..." + ANSI_WHITE);
+		// check if server is offline
+		if (!getServer().getOnlineMode()){
+			if (!getServer().getIp().equals("127.0.0.1") && !getServer().getIp().equals("localhost")){
+				log.info("This plugin does not support offline servers! Disabling...");
+				getServer().getPluginManager().disablePlugin(this);
+				return;
+			}
+			else if (plugin.getConfig().getBoolean("verbose-logging"))
+				log.info("Server is probably using BungeeCord. Allowing plugin to load...");
+		}
 
 		// autoupdate
 		if (getConfig().getBoolean("enable-auto-update")){
