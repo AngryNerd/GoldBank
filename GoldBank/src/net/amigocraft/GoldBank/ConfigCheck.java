@@ -25,7 +25,7 @@ public class ConfigCheck {
 				defConfig = YamlConfiguration.loadConfiguration(defStream);
 				for (String key : y.getKeys(true)){
 					if (!plugin.getConfig().isSet(key) || !validate(key)){
-						GoldBank.log.warning(ANSI_RED + "[GoldBank] Error detected in config value \"" + key + "\"! We'll take care of it..." + ANSI_WHITE);
+						plugin.log.warning(ANSI_RED + "[GoldBank] Error detected in config value \"" + key + "\"! We'll take care of it..." + ANSI_WHITE);
 						plugin.getConfig().set(key, defConfig.get(key));
 						plugin.getConfig().options().header(header);
 						plugin.getConfig().options().copyHeader(false);
@@ -34,10 +34,10 @@ public class ConfigCheck {
 				}
 			}
 			else
-				GoldBank.log.info(GoldBank.ANSI_GREEN + "[GoldBank] " + ANSI_RED + "Error checking config values!" + ANSI_WHITE);
+				plugin.log.info(GoldBank.ANSI_GREEN + "[GoldBank] " + ANSI_RED + "Error checking config values!" + ANSI_WHITE);
 		}
 		catch (Exception e){
-			GoldBank.log.info(ANSI_RED + "Error checking config values!" + ANSI_WHITE);
+			plugin.log.info(ANSI_RED + "Error checking config values!" + ANSI_WHITE);
 		}
 	}
 

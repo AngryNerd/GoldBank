@@ -2,7 +2,6 @@ package net.amigocraft.GoldBank.api;
 
 import java.util.HashMap;
 
-import net.amigocraft.GoldBank.GoldBank;
 import net.amigocraft.GoldBank.util.InventoryUtils;
 
 import org.bukkit.Material;
@@ -103,8 +102,6 @@ public class PlayerInv extends JavaPlugin {
 					if (InventoryUtils.getAmountInInv(p.getInventory(), Material.GOLD_BLOCK) > 0 && remaining > 0){
 						InventoryUtils.removeFromPlayerInv(p, Material.GOLD_BLOCK, 0, 1);
 						addGoldToPlayerInv(p, 81 - remaining);
-						GoldBank.log.info("blocks");
-						GoldBank.log.info(Integer.toString(remaining));
 						remaining = 0;
 					}
 				}
@@ -122,8 +119,6 @@ public class PlayerInv extends JavaPlugin {
 					if (InventoryUtils.getAmountInInv(p.getInventory(), Material.GOLD_INGOT) > 0 && remaining > 0){
 						InventoryUtils.removeFromPlayerInv(p, Material.GOLD_INGOT, 0, 1);
 						addGoldToPlayerInv(p, 9 - remaining);
-						GoldBank.log.info("ingots");
-						GoldBank.log.info(Integer.toString(remaining));
 						remaining = 0;
 					}
 				}

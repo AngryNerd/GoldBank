@@ -99,7 +99,7 @@ public class InventoryUtils {
 				u.printStackTrace();
 			}
 		}
-		GoldBank.log.info(GoldBank.ANSI_GREEN + "[GoldBank] Successfully allocated interest to " + success + " chests. Failed to add interest to " + failed + " chests." + GoldBank.ANSI_WHITE);
+		plugin.log.info(GoldBank.ANSI_GREEN + "[GoldBank] Successfully allocated interest to " + success + " chests. Failed to add interest to " + failed + " chests." + GoldBank.ANSI_WHITE);
 	}
 
 	// check amount of item in inventory

@@ -99,10 +99,10 @@ import org.bukkit.potion.PotionEffect;
 @SuppressWarnings("unused")
 public class GoldBank extends JavaPlugin implements Listener {
 	public static GoldBank plugin;
-	public final static Logger log = Logger.getLogger("Minecraft");
-	public static final String ANSI_RED = "\u001B[31m";
-	public static final String ANSI_GREEN = "\u001B[32m";
-	public static final String ANSI_WHITE = "\u001B[37m";
+	public Logger log;
+	public static String ANSI_RED = "\u001B[31m";
+	public static String ANSI_GREEN = "\u001B[32m";
+	public static String ANSI_WHITE = "\u001B[37m";
 	private String[] openPlayer = new String[256];
 	private String[] openingPlayer = new String[256];
 	private String[] openType = new String[256];
@@ -113,6 +113,8 @@ public class GoldBank extends JavaPlugin implements Listener {
 
 	@Override
 	public void onEnable(){
+		
+		log = this.getLogger();
 
 		// check if server is offline
 		if (!getServer().getOnlineMode()){
@@ -121,7 +123,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 				getServer().getPluginManager().disablePlugin(this);
 				return;
 			}
-			else if (plugin.getConfig().getBoolean("verbose-logging"))
+			else
 				log.info("Server is probably using BungeeCord. Allowing plugin to load...");
 		}
 
@@ -137,7 +139,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 				Metrics metrics = new Metrics(this);
 				metrics.start();
 			}
-			catch (IOException e) {log.warning(ANSI_RED + "[GoldBank] Failed to submit statistics to Plugin Metrics" + ANSI_WHITE);}
+			catch (IOException e) {log.warning(ANSI_RED + "Failed to submit statistics to Plugin Metrics" + ANSI_WHITE);}
 		}
 
 		// register events and the plugin variable
@@ -148,10 +150,10 @@ public class GoldBank extends JavaPlugin implements Listener {
 		if (getServer().getPluginManager().getPlugin("Vault") != null){
 			final ServicesManager sm = getServer().getServicesManager();
 			sm.register(Economy.class, new VaultConnector(), this, ServicePriority.Highest);
-			log.info(ANSI_GREEN + "[GoldBank] Registered Vault interface." + ANSI_WHITE);
+			log.info(ANSI_GREEN + "Registered Vault interface." + ANSI_WHITE);
 		}
 		else {
-			log.info(ANSI_RED + "[GoldBank] Vault not found. Other plugins may not be able to access GoldBank accounts." + ANSI_WHITE);
+			log.info(ANSI_RED + "Vault not found. Other plugins may not be able to access GoldBank accounts." + ANSI_WHITE);
 		}
 
 		// initialize wallet arrays
@@ -280,29 +282,31 @@ public class GoldBank extends JavaPlugin implements Listener {
 		log.info(ANSI_GREEN + this + " has been enabled!" + ANSI_WHITE);
 	}
 	public void onDisable(){
-		log.info(ANSI_GREEN + "[GoldBank] " + ANSI_WHITE + "Please wait, purging variables...");
+		log.info(ANSI_GREEN + ANSI_WHITE + "Please wait, purging variables...");
+		ANSI_RED = null;
+		plugin = null;
 		boolean first = true;
 		for (int i = 0; i < openingPlayer.length; i++){
 			if (openType[i] != null){
-				if (openType[i].equals("wallet")){
-					Player p = getServer().getPlayer(openingPlayer[i]);
-					if (p != null){
-						p.closeInventory();
-						p.sendMessage(ChatColor.RED + "Wallet automatically closed by reload");
-					}
-					openType[i] = null;
-					openingPlayer[i] = null;
-					openPlayer[i] = null;
-					openWalletNo = null;
-					if (first){
-						if (nextIndex > i)
-							nextIndex = i;
-						first = false;
-					}
+				Player p = getServer().getPlayer(openingPlayer[i]);
+				if (p != null){
+					p.closeInventory();
+					p.sendMessage(ChatColor.RED + WordUtils.capitalize(openType[i]) + " automatically closed by reload");
+				}
+				openType[i] = null;
+				openingPlayer[i] = null;
+				openPlayer[i] = null;
+				openWalletNo = null;
+				if (first){
+					if (nextIndex > i)
+						nextIndex = i;
+					first = false;
 				}
 			}
 		}
 		log.info(ANSI_GREEN + this + " has been disabled!" + ANSI_WHITE);
+		ANSI_GREEN = null;
+		ANSI_WHITE = null;
 	}
 
 	// initiate function for detecting player clicking sign
@@ -623,7 +627,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 														invY.save(invF);
 													}
 													catch (Exception ex){
-														log.info("[GoldBank] WARNING: Couldn't save inventory for " + p);
+														log.warning("Couldn't save inventory for " + p);
 														ex.printStackTrace();
 													}
 													finally {
@@ -2373,7 +2377,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 					this.reloadConfig();
 					Bukkit.getPluginManager().disablePlugin(this);
 					Bukkit.getPluginManager().enablePlugin(this);
-					log.info(ANSI_GREEN + "[GoldBank] has been reloaded!" + ANSI_WHITE);
+					log.info(ANSI_GREEN + "has been reloaded!" + ANSI_WHITE);
 					if (sender instanceof Player)
 						sender.sendMessage(ChatColor.DARK_AQUA + "GoldBank has been reloaded!");
 				}
