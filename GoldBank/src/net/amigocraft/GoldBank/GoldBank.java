@@ -975,7 +975,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 																	InventoryUtils.removeFromPlayerInv(player, Material.GOLD_INGOT, 0, remove);
 																	remaining = remaining - (remove * 9);
 																}
-																else if (remaining >= 9 && InventoryUtils.getAmountInInv(player.getInventory(), Material.GOLD_BLOCK) >= 1){
+																if (remaining >= 9 && InventoryUtils.getAmountInInv(player.getInventory(), Material.GOLD_BLOCK) >= 1){
 																	InventoryUtils.removeFromPlayerInv(player, Material.GOLD_BLOCK, 0, 1);
 																	inv.addItem(new ItemStack[] {
 																			new ItemStack(Material.GOLD_INGOT, 9 - (remaining * 9))});
@@ -996,6 +996,13 @@ public class GoldBank extends JavaPlugin implements Listener {
 																}
 																if (remaining >= 1 && InventoryUtils.getAmountInInv(player.getInventory(), Material.GOLD_INGOT) >= 1){
 																	InventoryUtils.removeFromPlayerInv(player, Material.GOLD_INGOT, 0, 1);
+																	player.getInventory().addItem(new ItemStack(Material.GOLD_NUGGET, 9 - remaining));
+																	remaining = 0;
+																}
+																if (remaining >= 1 && InventoryUtils.getAmountInInv(player.getInventory(), Material.GOLD_BLOCK )>= 1){
+																	InventoryUtils.removeFromPlayerInv(player, Material.GOLD_BLOCK, 0, 1);
+																	player.getInventory().addItem(new ItemStack(Material.GOLD_INGOT, 8 - (remaining / 9)));
+																	remaining -= remaining / 9;
 																	player.getInventory().addItem(new ItemStack(Material.GOLD_NUGGET, 9 - remaining));
 																	remaining = 0;
 																}
@@ -1160,16 +1167,30 @@ public class GoldBank extends JavaPlugin implements Listener {
 																			InventoryUtils.removeFromInv(chestInv, Material.GOLD_INGOT, 0, remove);
 																			remaining = remaining - (remove * 9);
 																		}
-																		else if (remaining >= 9){
+																		if (remaining >= 9){
 																			InventoryUtils.removeFromInv(chestInv, Material.GOLD_BLOCK, 0, 1);
 																			chestInv.addItem(new ItemStack[] {
 																					new ItemStack(Material.GOLD_INGOT, 9 - (remaining / 9))});
 																		}
 																		if (remaining >= 1){
-																			InventoryUtils.removeFromInv(chestInv, Material.GOLD_NUGGET, 0, remaining);
+																			if (InventoryUtils.getAmountInInv(chestInv, Material.GOLD_NUGGET) >= remaining){
+																				InventoryUtils.removeFromInv(chestInv, Material.GOLD_NUGGET, 0, remaining);
+																				remaining = 0;
+																			}
+																			else {
+																				InventoryUtils.removeFromInv(chestInv, Material.GOLD_NUGGET, 0, InventoryUtils.getAmountInInv(chestInv, Material.GOLD_NUGGET));
+																				remaining -= InventoryUtils.getAmountInInv(chestInv, Material.GOLD_NUGGET);
+																			}
 																		}
 																		if (remaining >= 1 && InventoryUtils.getAmountInInv(chestInv, Material.GOLD_INGOT) >= 1){
 																			InventoryUtils.removeFromInv(chestInv, Material.GOLD_INGOT, 0, 1);
+																			chestInv.addItem(new ItemStack(Material.GOLD_NUGGET, 9 - remaining));
+																			remaining = 0;
+																		}
+																		if (remaining >= 1 && InventoryUtils.getAmountInInv(chestInv, Material.GOLD_BLOCK )>= 1){
+																			InventoryUtils.removeFromInv(chestInv, Material.GOLD_BLOCK, 0, 1);
+																			chestInv.addItem(new ItemStack(Material.GOLD_INGOT, 8 - (remaining / 9)));
+																			remaining -= remaining / 9;
 																			chestInv.addItem(new ItemStack(Material.GOLD_NUGGET, 9 - remaining));
 																			remaining = 0;
 																		}
