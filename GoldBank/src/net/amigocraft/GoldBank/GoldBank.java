@@ -981,6 +981,19 @@ public class GoldBank extends JavaPlugin implements Listener {
 																			new ItemStack(Material.GOLD_INGOT, 9 - (remaining * 9))});
 																	remaining = 0;
 																}
+																if (remaining >= 1){
+																	int nuggetNum = InventoryUtils.getAmountInInv(player.getInventory(), Material.GOLD_NUGGET);
+																	if (nuggetNum >= 1){
+																		if (nuggetNum >= remaining){
+																			InventoryUtils.removeFromPlayerInv(player, Material.GOLD_NUGGET, 0, remaining);
+																			remaining = 0;
+																		}
+																		else {
+																			InventoryUtils.removeFromPlayerInv(player, Material.GOLD_NUGGET, 0, nuggetNum);
+																			remaining -= nuggetNum;
+																		}
+																	}
+																}
 																if (remaining >= 1 && InventoryUtils.getAmountInInv(player.getInventory(), Material.GOLD_INGOT) >= 1){
 																	InventoryUtils.removeFromPlayerInv(player, Material.GOLD_INGOT, 0, 1);
 																	player.getInventory().addItem(new ItemStack(Material.GOLD_NUGGET, 9 - remaining));
@@ -1036,16 +1049,16 @@ public class GoldBank extends JavaPlugin implements Listener {
 																player.sendMessage(ChatColor.DARK_PURPLE + "You bought " + buyAmount + " " + forMatName + " for " + buyPrice / buyMult + " golden " + unit + buyPriceS + "!");
 															}
 															else
-																player.sendMessage(ChatColor.RED + "Oh noes! You don't have enough open slots in your inventory!");
+																player.sendMessage(ChatColor.DARK_PURPLE + "Oh noes! You don't have enough open slots in your inventory!");
 														}
 														else
-															player.sendMessage(ChatColor.RED + "Oh noes! You don't have enough gold to buy that!");
+															player.sendMessage(ChatColor.DARK_PURPLE + "Oh noes! You don't have enough gold to buy that!");
 													}
 													else
-														player.sendMessage(ChatColor.RED + "Error: The associated chest does not have enough " + forMatName + "!");
+														player.sendMessage(ChatColor.DARK_PURPLE + "Error: The associated chest does not have enough " + forMatName + "!");
 												}
 												else
-													player.sendMessage(ChatColor.RED + "You may not buy from this sign!");
+													player.sendMessage(ChatColor.DARK_PURPLE + "You may not buy from this sign!");
 											}
 											// sell
 											else if (!pHead){
@@ -1155,6 +1168,11 @@ public class GoldBank extends JavaPlugin implements Listener {
 																		if (remaining >= 1){
 																			InventoryUtils.removeFromInv(chestInv, Material.GOLD_NUGGET, 0, remaining);
 																		}
+																		if (remaining >= 1 && InventoryUtils.getAmountInInv(chestInv, Material.GOLD_INGOT) >= 1){
+																			InventoryUtils.removeFromInv(chestInv, Material.GOLD_INGOT, 0, 1);
+																			chestInv.addItem(new ItemStack(Material.GOLD_NUGGET, 9 - remaining));
+																			remaining = 0;
+																		}
 																		chestInv.addItem(new ItemStack[] {sellIs});
 																	}
 																	int remainder = sellPrice;
@@ -1188,27 +1206,27 @@ public class GoldBank extends JavaPlugin implements Listener {
 																	player.sendMessage(ChatColor.DARK_PURPLE + "You sold " + sellAmount + " " + forMatName + " for " + (sellPrice / sellMult) + " golden " + unit + sellPriceS + "!");
 																}
 																else
-																	player.sendMessage(ChatColor.RED + "You do not have enough " + forMatName + "!");
+																	player.sendMessage(ChatColor.DARK_PURPLE + "You do not have enough " + forMatName + "!");
 															}
 															else
-																player.sendMessage(ChatColor.RED + "Error: The associated chest does not have enough gold!");
+																player.sendMessage(ChatColor.DARK_PURPLE + "Error: The associated chest does not have enough gold!");
 														}
 														else
-															player.sendMessage(ChatColor.RED + "You may not sell damaged tools!");
+															player.sendMessage(ChatColor.DARK_PURPLE + "You may not sell damaged tools!");
 													}
 													else
-														player.sendMessage(ChatColor.RED + "You may not sell to this sign!");
+														player.sendMessage(ChatColor.DARK_PURPLE + "You may not sell to this sign!");
 												}
 												else
-													player.sendMessage(ChatColor.RED + "You must have gold or " + forMatName + " in your hand to use this sign!");
+													player.sendMessage(ChatColor.DARK_PURPLE + "You must have gold or " + forMatName + " in your hand to use this sign!");
 											}
 										}
 										else {
-											player.sendMessage(ChatColor.RED + "Error: This player shop does not have an associated chest! Attempting to create one...");
+											player.sendMessage(ChatColor.DARK_PURPLE + "Error: This player shop does not have an associated chest! Attempting to create one...");
 											if (chestLoc.getBlock().getType() == Material.AIR)
 												chestLoc.getBlock().setType(Material.CHEST);
 											else
-												player.sendMessage(ChatColor.RED + "Could not create the chest because the block is not air! Ask the shop owner to change the block below this sign to air.");
+												player.sendMessage(ChatColor.DARK_PURPLE + "Could not create the chest because the block is not air! Ask the shop owner to change the block below this sign to air.");
 										}
 									}
 									catch (Exception f){
