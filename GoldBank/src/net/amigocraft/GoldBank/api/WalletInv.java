@@ -112,6 +112,7 @@ public class WalletInv {
 						inv.addItem(new ItemStack(Material.GOLD_INGOT, ingot));
 					if (nugget > 0)
 						inv.addItem(new ItemStack(Material.GOLD_NUGGET, nugget));
+					invY.save(invF);
 					return true;
 				}
 				else
@@ -199,6 +200,7 @@ public class WalletInv {
 						for (int i = 0; i < inv.getSize(); i++){
 							invY.set(Integer.toString(i), inv.getItem(i));
 						}
+						invY.save(invF);
 						return true;
 					}
 					catch (Exception ex){

@@ -2723,12 +2723,18 @@ public class GoldBank extends JavaPlugin implements Listener {
 							if (MiscUtils.isInt(args[1])){
 								int amount = Integer.parseInt(args[1]);
 								if (BankInv.getGoldInBankInv(pName) >= amount + getConfig().getInt("wire-fee")){
-									BankInv.removeGoldFromBankInv(pName, amount + getConfig().getInt("wire-fee"));
-									BankInv.addGoldToBankInv(args[0], amount);
-									sender.sendMessage(ChatColor.DARK_GREEN + "[GoldBank] Successfully wired " + amount + " gold nuggets to the account of " + args[0]);
-									sender.sendMessage(ChatColor.DARK_GREEN + "[GoldBank] Charged a fee of " + getConfig().getInt("wire-fee") + " gold nuggets.");
-									if (getServer().getPlayer(args[0]) != null)
-										getServer().getPlayer(args[0]).sendMessage(ChatColor.DARK_GREEN + "[GoldBank] " + pName + " has wired " + amount + " gold nuggets to your GoldBank account!");
+									if (BankInv.removeGoldFromBankInv(pName, amount + getConfig().getInt("wire-fee"))){
+										if (BankInv.addGoldToBankInv(args[0], amount)){
+											sender.sendMessage(ChatColor.DARK_GREEN + "[GoldBank] Successfully wired " + amount + " gold nuggets to the account of " + args[0]);
+											sender.sendMessage(ChatColor.DARK_GREEN + "[GoldBank] Charged a fee of " + getConfig().getInt("wire-fee") + " gold nuggets.");
+											if (getServer().getPlayer(args[0]) != null)
+												getServer().getPlayer(args[0]).sendMessage(ChatColor.DARK_GREEN + "[GoldBank] " + pName + " has wired " + amount + " gold nuggets to your GoldBank account!");
+										}
+										else
+											sender.sendMessage(ChatColor.RED + "[GoldBank] Failed to add gold to " + args[0] + "'s GoldBank account!");
+									}
+									else
+										sender.sendMessage(ChatColor.RED + "[GoldBank] Failed to remove gold from your GoldBank account!");
 								}
 								else
 									sender.sendMessage(ChatColor.RED + "[GoldBank] You do not have enough gold in your GoldBank account!");
