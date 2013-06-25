@@ -2720,7 +2720,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 					String pName = sender.getName();
 					if (new VaultConnector().hasAccount(pName)){
 						if (new VaultConnector().hasAccount(args[0])){
-							if (MiscUtils.isInt(args[2])){
+							if (MiscUtils.isInt(args[1])){
 								int amount = Integer.parseInt(args[1]);
 								if (BankInv.getGoldInBankInv(pName) >= amount + getConfig().getInt("wire-fee")){
 									BankInv.removeGoldFromBankInv(pName, amount + getConfig().getInt("wire-fee"));
