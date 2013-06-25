@@ -2747,6 +2747,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 			}
 			else
 				sender.sendMessage(ChatColor.RED + "[GoldBank] Only ingame players may use this command!");
+			return true;
 		}
 		return false;
 	}
