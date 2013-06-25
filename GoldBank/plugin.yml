@@ -1,5 +1,5 @@
 name: GoldBank
-version: 2.6.0.1
+version: 2.6.0.2
 main: net.amigocraft.GoldBank.GoldBank
 commands:
   gb:
@@ -21,6 +21,9 @@ commands:
       log:
         description: Allows a player to view a log of any shop's transactions, given they have the proper permissions
         usage: /gb shop log
+  wire:
+    description: Wires money to another player
+    usage: /wire {player} {amount}
 permissions:
   goldbank.*:
     description: Contains all permissions

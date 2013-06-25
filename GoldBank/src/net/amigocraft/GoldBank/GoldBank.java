@@ -29,6 +29,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.logging.Logger;
 
+import net.amigocraft.GoldBank.api.BankInv;
 import net.amigocraft.GoldBank.economy.VaultConnector;
 import net.amigocraft.GoldBank.util.*;
 import net.milkbowl.vault.economy.Economy;
@@ -113,7 +114,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 
 	@Override
 	public void onEnable(){
-		
+
 		log = this.getLogger();
 
 		// autoupdate
@@ -2712,6 +2713,40 @@ public class GoldBank extends JavaPlugin implements Listener {
 			else if (args.length < 1)
 				sender.sendMessage(ChatColor.RED + "Too few arguments! Usage: /gb [command] [args]");
 			return true;
+		}
+		else if (commandLabel.equalsIgnoreCase("wire")){
+			if (sender instanceof Player){
+				if (args.length >= 2){
+					String pName = sender.getName();
+					if (new VaultConnector().hasAccount(pName)){
+						if (new VaultConnector().hasAccount(args[0])){
+							if (MiscUtils.isInt(args[2])){
+								int amount = Integer.parseInt(args[1]);
+								if (BankInv.getGoldInBankInv(pName) >= amount + getConfig().getInt("wire-fee")){
+									BankInv.removeGoldFromBankInv(pName, amount + getConfig().getInt("wire-fee"));
+									BankInv.addGoldToBankInv(args[0], amount);
+									sender.sendMessage(ChatColor.DARK_GREEN + "[GoldBank] Successfully wired " + amount + " gold nuggets to the account of " + args[0]);
+									sender.sendMessage(ChatColor.DARK_GREEN + "[GoldBank] Charged a fee of " + getConfig().getInt("wire-fee") + " gold nuggets.");
+									if (getServer().getPlayer(args[0]) != null)
+										getServer().getPlayer(args[0]).sendMessage(ChatColor.DARK_GREEN + "[GoldBank] " + pName + " has wired " + amount + " gold nuggets to your GoldBank account!");
+								}
+								else
+									sender.sendMessage(ChatColor.RED + "[GoldBank] You do not have enough gold in your GoldBank account!");
+							}
+							else
+								sender.sendMessage(ChatColor.RED + "[GoldBank] The amount specified was not an integer!");
+						}
+						else
+							sender.sendMessage(ChatColor.RED + "[GoldBank] The specified player does not have a GoldBank account!");
+					}
+					else
+						sender.sendMessage(ChatColor.RED + "[GoldBank] You do not have a GoldBank account!");
+				}
+				else
+					sender.sendMessage(ChatColor.RED + "[GoldBank] Invalid arguments! Usage: /wire {player} {amount}");
+			}
+			else
+				sender.sendMessage(ChatColor.RED + "[GoldBank] Only ingame players may use this command!");
 		}
 		return false;
 	}

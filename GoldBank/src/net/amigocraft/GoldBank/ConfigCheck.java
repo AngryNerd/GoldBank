@@ -49,7 +49,7 @@ public class ConfigCheck {
 			}
 		}
 		// check value dayofweek
-		if (key.equals("dayofweek")){
+		else if (key.equals("dayofweek")){
 			String daycheck = plugin.getConfig().getString("dayofweek");
 			if (!daycheck.equalsIgnoreCase("Sunday") && !daycheck.equalsIgnoreCase("Monday") && !daycheck.equalsIgnoreCase("Tuesday") && !daycheck.equalsIgnoreCase("Wednesday") && !daycheck.equalsIgnoreCase("Thursday") && !daycheck.equalsIgnoreCase("Friday") && !daycheck.equalsIgnoreCase("Saturday")){
 				return false;
@@ -83,29 +83,34 @@ public class ConfigCheck {
 					return false;
 				}
 			}
-		if (key.equals("atmfee")){
-			int atmfee = plugin.getConfig().getInt("atmfee");
-			if (atmfee < 0){
-				return false;
+			else if (key.equals("atmfee")){
+				int atmfee = plugin.getConfig().getInt("atmfee");
+				if (atmfee < 0){
+					return false;
+				}
 			}
-		}
-		if (key.equals("walletsize")){
-			int walletSize = plugin.getConfig().getInt("walletsize");
-			if (walletSize < 9 || walletSize > 54 || walletSize / 9 != Math.round(walletSize / 9)){
-				return false;
+			else if (key.equals("walletsize")){
+				int walletSize = plugin.getConfig().getInt("walletsize");
+				if (walletSize < 9 || walletSize > 54 || walletSize / 9 != Math.round(walletSize / 9)){
+					return false;
+				}
 			}
-		}
-		if (key.equals("rare-drop-rate")){
-			double raredroprate = plugin.getConfig().getDouble("rare-drop-rate");
-			if (raredroprate < 0 || raredroprate > 1){
-				return false;
+			else if (key.equals("rare-drop-rate")){
+				double raredroprate = plugin.getConfig().getDouble("rare-drop-rate");
+				if (raredroprate < 0 || raredroprate > 1){
+					return false;
+				}
 			}
-		}
-		if (key.equals("disable-rare-drops-for")){
-			if (!plugin.getConfig().isList("disable-rare-drops-for") || !plugin.getConfig().isSet("disable-rare-drops-for")){
-				return false;
+			else if (key.equals("disable-rare-drops-for")){
+				if (!plugin.getConfig().isList("disable-rare-drops-for") || !plugin.getConfig().isSet("disable-rare-drops-for")){
+					return false;
+				}
 			}
-		}
+			else if (key.equals("wire-fee")){
+				if (!plugin.getConfig().isInt("wire-fee")){
+					return false;
+				}
+			}
 
 		YamlConfiguration defConfig = null;
 		InputStream defStream = plugin.getResource("config.yml");

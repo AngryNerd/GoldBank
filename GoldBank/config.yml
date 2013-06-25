@@ -90,3 +90,6 @@ only-gold-in-wallets: false
 disable-drops-in:
   - your_world
   - your_second_world
+  
+#How much gold (in nuggets) should be charged from a player's GoldBank account when they wire money to another player?
+wire-fee: 1
