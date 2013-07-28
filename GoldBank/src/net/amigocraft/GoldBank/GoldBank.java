@@ -3181,39 +3181,41 @@ public class GoldBank extends JavaPlugin implements Listener {
 	public void onInventoryMoveItem(InventoryMoveItemEvent e){
 		if (e.getSource().getType() == InventoryType.CHEST){
 			if (e.getSource().getHolder() != null){
-				Block chest = ((Chest)e.getSource().getHolder()).getBlock();
-				Location l = chest.getLocation();
-				l.setY(l.getY() + 1);
-				if (l.getBlock().getType() == Material.WALL_SIGN){
-					Connection conn = null;
-					Statement st = null;
-					ResultSet rs = null;
-					int i = 0;
-					try {
-						Class.forName("org.sqlite.JDBC");
-						String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "chestdata.db";
-						conn = DriverManager.getConnection(dbPath);
-						st = conn.createStatement();
-						rs = st.executeQuery("SELECT COUNT(*) FROM shops WHERE world = '" + l.getWorld().getName() + "' AND x = '" + l.getX() + "' AND y = '" + l.getY() + "' AND z = '" + l.getZ() + "'");
-						while (rs.next()){
-							i = rs.getInt(1);
-						}
-					}
-					catch (Exception q){
-						q.printStackTrace();
-					}
-					finally {
+				if (e.getSource().getHolder() instanceof Chest){
+					Block chest = ((Chest)e.getSource().getHolder()).getBlock();
+					Location l = chest.getLocation();
+					l.setY(l.getY() + 1);
+					if (l.getBlock().getType() == Material.WALL_SIGN){
+						Connection conn = null;
+						Statement st = null;
+						ResultSet rs = null;
+						int i = 0;
 						try {
-							conn.close();
-							st.close();
-							rs.close();
+							Class.forName("org.sqlite.JDBC");
+							String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "chestdata.db";
+							conn = DriverManager.getConnection(dbPath);
+							st = conn.createStatement();
+							rs = st.executeQuery("SELECT COUNT(*) FROM shops WHERE world = '" + l.getWorld().getName() + "' AND x = '" + l.getX() + "' AND y = '" + l.getY() + "' AND z = '" + l.getZ() + "'");
+							while (rs.next()){
+								i = rs.getInt(1);
+							}
 						}
-						catch (Exception k){
-							k.printStackTrace();
+						catch (Exception q){
+							q.printStackTrace();
 						}
+						finally {
+							try {
+								conn.close();
+								st.close();
+								rs.close();
+							}
+							catch (Exception k){
+								k.printStackTrace();
+							}
+						}
+						if (i > 0)
+							e.setCancelled(true);
 					}
-					if (i > 0)
-						e.setCancelled(true);
 				}
 			}
 		}
