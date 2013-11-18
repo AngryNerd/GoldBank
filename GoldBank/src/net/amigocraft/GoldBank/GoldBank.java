@@ -158,7 +158,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 		// add the crafting recipe for wallets
 		ItemStack is = new ItemStack(Material.BOOK, 1);
 		ItemMeta meta = is.getItemMeta();
-		meta.setDisplayName("�2Wallet");
+		meta.setDisplayName("§2Wallet");
 		is.setItemMeta(meta);
 		final ShapedRecipe walletRecipe1 = new ShapedRecipe(is);
 		walletRecipe1.shape("XXX", "LXL", "LLL");
@@ -311,7 +311,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 				ItemMeta meta = is.getItemMeta();
 				if (!(meta.getDisplayName() == null) && meta.getLore() != null){
 					if (meta.getLore().size() >= 4){
-						if (meta.getDisplayName().equals("�2Wallet") && meta.getLore().get(3).equals("�2GoldBank")){
+						if (meta.getDisplayName().equals("§2Wallet") && meta.getLore().get(3).equals("§2GoldBank")){
 							// cancel the event because the item in hand is a wallet
 							e.setCancelled(true);
 							wallet = true;
@@ -520,7 +520,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 				ItemMeta meta = is.getItemMeta();
 				if (!(meta.getDisplayName() == null) && meta.getLore() != null){
 					if (meta.getLore().size() >= 4){
-						if (meta.getDisplayName().equals("�2Wallet") && meta.getLore().get(3).equals("�2GoldBank")){
+						if (meta.getDisplayName().equals("§2Wallet") && meta.getLore().get(3).equals("§2GoldBank")){
 							// cancel the event because the item in hand is a wallet
 							e.setCancelled(true);
 							wallet = true;
@@ -539,7 +539,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 						String p = player.getName();
 						Sign sign = (Sign) e.getClickedBlock().getState();
 						String fline = sign.getLine(0);
-						if (fline.equalsIgnoreCase("�2[GoldBank]")){
+						if (fline.equalsIgnoreCase("§2[GoldBank]")){
 							e.setCancelled(true);
 							if (player.hasPermission("goldbank.sign.bank.use")){
 								Connection conn = null;
@@ -576,7 +576,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 										if (fpcount == 0){
 											int tier = 1;
 											if (sign.getLine(1).length() >= 6){
-												if (sign.getLine(1).substring(0, 6).equalsIgnoreCase("�4Tier")){
+												if (sign.getLine(1).substring(0, 6).equalsIgnoreCase("§4Tier")){
 													if (MiscUtils.isInt(sign.getLine(1).substring(7, 8))){
 														if (getConfig().isSet("tiers." + Integer.parseInt(sign.getLine(1).substring(7, 8)) + ".size")){
 															if (getConfig().isSet("tiers." + Integer.parseInt(sign.getLine(1).substring(7, 8)) + ".fee")){
@@ -595,9 +595,9 @@ public class GoldBank extends JavaPlugin implements Listener {
 												if (hand.getAmount() >= fee || free){
 													sign.setLine(2, "");
 													if (master)
-														sign.setLine(3, "�dMaster");
+														sign.setLine(3, "§dMaster");
 													else
-														sign.setLine(3, "�5" + p);
+														sign.setLine(3, "§5" + p);
 													sign.update();
 													int signX = sign.getX();
 													int signY = sign.getY();
@@ -732,7 +732,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 								player.sendMessage(ChatColor.RED + "Oh noes! You don't have permission to do this! :(");
 							}
 						}
-						else if (fline.equalsIgnoreCase("�2[GoldATM]")){
+						else if (fline.equalsIgnoreCase("§2[GoldATM]")){
 							e.setCancelled(true);
 							if (player.hasPermission("goldbank.sign.atm.use")){
 								int atmfee = getConfig().getInt("atmfee");
@@ -1313,8 +1313,8 @@ public class GoldBank extends JavaPlugin implements Listener {
 								if (signLoc.getBlock().getType() == Material.WALL_SIGN || signLoc.getBlock().getType() == Material.SIGN_POST){
 									Sign sign = (Sign)signLoc.getBlock().getState();
 									if (!master){
-										sign.setLine(2, "�5Claim this");
-										sign.setLine(3, "�5sign!");
+										sign.setLine(2, "§5Claim this");
+										sign.setLine(3, "§5sign!");
 									}
 									sign.update();
 									// check if sign is master or if player owns sign at location
@@ -1501,7 +1501,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 					u.printStackTrace();
 				}
 			}
-			if (sign.getLine(0).equalsIgnoreCase("�2[GoldBank]")){
+			if (sign.getLine(0).equalsIgnoreCase("§2[GoldBank]")){
 				boolean master = false;
 				conn = null;
 				st = null;
@@ -1540,7 +1540,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 					b.getPlayer().sendMessage(ChatColor.RED + "Oh noes! You don't have permission to break that sign! :(");
 				}
 			}
-			else if (sign.getLine(0).equalsIgnoreCase("�2[GoldATM]")){
+			else if (sign.getLine(0).equalsIgnoreCase("§2[GoldATM]")){
 				if (!b.getPlayer().hasPermission("goldbank.sign.atm.destroy")){
 					b.setCancelled(true);
 					b.getPlayer().sendMessage(ChatColor.RED + "Oh noes! You don't have permission to break that sign! :(");
@@ -1623,7 +1623,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 					u.printStackTrace();
 				}
 			}
-			if (sign.getLine(0).equalsIgnoreCase("�2[GoldBank]")){
+			if (sign.getLine(0).equalsIgnoreCase("§2[GoldBank]")){
 				if (!b.getPlayer().hasPermission("goldbank.sign.bank.destroy")){
 					b.setCancelled(true);
 					b.getPlayer().sendMessage(ChatColor.RED +"Oh noes! You don't have permission to break that block! :(");
@@ -1683,7 +1683,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 					}
 				}
 			}
-			else if (sign.getLine(0).equalsIgnoreCase("�2[GoldATM]")){
+			else if (sign.getLine(0).equalsIgnoreCase("§2[GoldATM]")){
 				if (!b.getPlayer().hasPermission("goldbank.sign.atm.destroy")){
 					b.setCancelled(true);
 					b.getPlayer().sendMessage(ChatColor.RED + "Oh noes! You don't have permission to break that block! :(");
@@ -1693,13 +1693,13 @@ public class GoldBank extends JavaPlugin implements Listener {
 		else if (MiscUtils.getAdjacentBlock(b.getBlock(), Material.SIGN_POST) != null){
 			Block adjblock = MiscUtils.getAdjacentBlock(b.getBlock(), Material.SIGN_POST);
 			Sign sign = (Sign)adjblock.getState();
-			if (sign.getLine(0).equalsIgnoreCase("�2[GoldBank]")){
+			if (sign.getLine(0).equalsIgnoreCase("§2[GoldBank]")){
 				if (!b.getPlayer().hasPermission("goldbank.sign.bank.destroy")){
 					b.setCancelled(true);
 					b.getPlayer().sendMessage(ChatColor.RED + "Oh noes! You don't have permission to break that block! :(");
 				}
 			}
-			else if (sign.getLine(0).equalsIgnoreCase("�2[GoldATM]")){
+			else if (sign.getLine(0).equalsIgnoreCase("§2[GoldATM]")){
 				if (!b.getPlayer().hasPermission("goldbank.sign.atm.destroy")){
 					b.setCancelled(true);
 					b.getPlayer().sendMessage(ChatColor.RED + "Oh noes! You don't have permission to break that block! :(");
@@ -1862,13 +1862,13 @@ public class GoldBank extends JavaPlugin implements Listener {
 			Block block = it.next();
 			if (block.getType() == Material.WALL_SIGN){
 				Sign sign = (Sign)block.getState();
-				if (sign.getLine(0).equalsIgnoreCase("�2[GoldBank]") || sign.getLine(0).equalsIgnoreCase("�2[GoldATM]")){
+				if (sign.getLine(0).equalsIgnoreCase("§2[GoldBank]") || sign.getLine(0).equalsIgnoreCase("§2[GoldATM]")){
 					it.remove();
 				}
 				String line = sign.getLine(0);
 				String rline = line.replace("[", "");
 				rline = rline.replace("]", "");
-				rline = rline.replace("�2", "");
+				rline = rline.replace("§2", "");
 				rline = rline.toUpperCase();
 				String[] matInfo = new String[2];
 				String data = null;
@@ -1889,13 +1889,13 @@ public class GoldBank extends JavaPlugin implements Listener {
 			}
 			else if (block.getType() == Material.SIGN_POST){
 				Sign sign = (Sign)block.getState();
-				if (sign.getLine(0).equalsIgnoreCase("�2[GoldBank]") || sign.getLine(0).equalsIgnoreCase("�2[GoldATM]")){
+				if (sign.getLine(0).equalsIgnoreCase("§2[GoldBank]") || sign.getLine(0).equalsIgnoreCase("§2[GoldATM]")){
 					it.remove();
 				}
 				String line = sign.getLine(0);
 				String rline = line.replace("[", "");
 				rline = rline.replace("]", "");
-				rline = rline.replace("�2", "");
+				rline = rline.replace("§2", "");
 				rline = rline.toUpperCase();
 				String[] matInfo = new String[2];
 				String data = null;
@@ -1923,17 +1923,17 @@ public class GoldBank extends JavaPlugin implements Listener {
 					adjBlock = MiscUtils.getAdjacentBlock(block, Material.SIGN_POST);
 				}
 				Sign sign = (Sign)adjBlock.getState();
-				if (sign.getLine(0).equalsIgnoreCase("�2[GoldBank]")){
+				if (sign.getLine(0).equalsIgnoreCase("§2[GoldBank]")){
 					it.remove();
 				}
-				else if (sign.getLine(0).equalsIgnoreCase("�2[GoldATM]")){
+				else if (sign.getLine(0).equalsIgnoreCase("§2[GoldATM]")){
 					it.remove();
 				}
 				if (adjBlock != null || block.getType() == Material.CHEST){
 					String line = ((Sign)adjBlock.getState()).getLine(0);
 					String rline = line.replace("[", "");
 					rline = rline.replace("]", "");
-					rline = rline.replace("�2", "");
+					rline = rline.replace("§2", "");
 					rline = rline.toUpperCase();
 					String[] matInfo = new String[2];
 					String data = null;
@@ -2010,28 +2010,28 @@ public class GoldBank extends JavaPlugin implements Listener {
 				}
 			}
 			if (player.hasPermission(node)){
-				p.setLine(0, "�2[GoldBank]");
+				p.setLine(0, "§2[GoldBank]");
 				if (!master){
-					p.setLine(2, "�5Claim this");
-					p.setLine(3, "�5sign!");
+					p.setLine(2, "§5Claim this");
+					p.setLine(3, "§5sign!");
 				}
 				else {
 					p.setLine(2, "");
-					p.setLine(3, "�dMaster");
+					p.setLine(3, "§dMaster");
 				}
 				int tier = 1;
 				if (p.getLine(1).length() >= 5){
 					if (p.getLine(1).substring(0, 4).equalsIgnoreCase("Tier") && MiscUtils.isInt(p.getLine(1).substring(5, 6))){
 						if (getConfig().isSet("tiers." + p.getLine(1).substring(0, 4) + ".size") && getConfig().isSet("tiers." + p.getLine(1).substring(0, 4) + ".fee")){
 							tier = Integer.parseInt(p.getLine(1).substring(5, 6));
-							p.setLine(1, "�4Tier " + p.getLine(1).substring(5, 6));
+							p.setLine(1, "§4Tier " + p.getLine(1).substring(5, 6));
 						}
 						else {
-							p.setLine(1, "�4Tier 1");
+							p.setLine(1, "§4Tier 1");
 						}
 					}
 					else {
-						p.setLine(1, "�4Tier 1");
+						p.setLine(1, "§4Tier 1");
 					}
 				}
 				else if (p.getLine(1).length() >= 1){
@@ -2039,19 +2039,19 @@ public class GoldBank extends JavaPlugin implements Listener {
 						if (getConfig().isSet("tiers." + Integer.parseInt(p.getLine(1).substring(0, 1)) + ".size")){
 							if (getConfig().isSet("tiers." + Integer.parseInt(p.getLine(1).substring(0, 1)) + ".fee")){
 								tier = Integer.parseInt(p.getLine(1).substring(0, 1));
-								p.setLine(1, "�4Tier " + p.getLine(1).substring(0, 1));
+								p.setLine(1, "§4Tier " + p.getLine(1).substring(0, 1));
 							}
 							else {
-								p.setLine(1, "�4Tier 1");
+								p.setLine(1, "§4Tier 1");
 							}
 						}
 					}
 					else {
-						p.setLine(1, "�4Tier 1");
+						p.setLine(1, "§4Tier 1");
 					}
 				}
 				else {
-					p.setLine(1, "�4Tier 1");
+					p.setLine(1, "§4Tier 1");
 				}
 				if (master){
 					conn = null;
@@ -2078,17 +2078,17 @@ public class GoldBank extends JavaPlugin implements Listener {
 				}
 			}
 		}
-		else if (line.equalsIgnoreCase("�2[GoldBank]")){
+		else if (line.equalsIgnoreCase("§2[GoldBank]")){
 			if (!player.hasPermission("goldbank.sign.bank.create")){
 				p.setLine(0, "[GoldBank]");
 			}
 		}
 		else if (line.equalsIgnoreCase("[GoldATM]")){
 			if (player.hasPermission("goldbank.sign.atm.create")){
-				p.setLine(0, "�2[GoldATM]");
+				p.setLine(0, "§2[GoldATM]");
 			}
 		}
-		else if (line.equalsIgnoreCase("�2[GoldATM]")){
+		else if (line.equalsIgnoreCase("§2[GoldATM]")){
 			if (!player.hasPermission("goldbank.sign.atm.create")){
 				p.setLine(0, "[GoldATM]");
 			}
@@ -2282,38 +2282,38 @@ public class GoldBank extends JavaPlugin implements Listener {
 										if ((mat.length() + dataLength) <= 11 || Material.getMaterial(matId) == Material.WOOL){
 											if (dataNum == 0 || Material.getMaterial(matId) == Material.WOOL){
 												String forMat = WordUtils.capitalize(mat.replace("_", " "));
-												p.setLine(0, "�2[" + forMat + "]");
+												p.setLine(0, "§2[" + forMat + "]");
 											}
 											else {
 												String forMat = WordUtils.capitalize(mat.replace("_", " "));
-												p.setLine(0, "�2[" + forMat + ":" + dataNum + "]");
+												p.setLine(0, "§2[" + forMat + ":" + dataNum + "]");
 											}
 										}
 										else {
 											if (dataNum == 0 || Material.getMaterial(rline) == Material.WOOL){
-												p.setLine(0, "�2[" + matId + "]");
+												p.setLine(0, "§2[" + matId + "]");
 											}
 											else
-												p.setLine(0, "�2[" + matId + ":" + dataNum + "]");
+												p.setLine(0, "§2[" + matId + ":" + dataNum + "]");
 										}
 										if  (Integer.parseInt(buys[0]) != -1 && Integer.parseInt(buys[1]) != -1){
 											if (buys[0].length() + buys[1].length() <= 3)
-												p.setLine(1, "�5" + "Buy " + buys[0] + " for " + buys[1] + buyUnit);
+												p.setLine(1, "§5" + "Buy " + buys[0] + " for " + buys[1] + buyUnit);
 											else
 												p.setLine(1, "Buy " + buys[0] + " for " + buys[1] + buyUnit);
 										}
 										if (Integer.parseInt(sells[0]) != -1 && Integer.parseInt(sells[1]) != -1 && !pHead){
 											if (sells[0].length() + sells[1].length() <= 2)
-												p.setLine(2, "�5" + "Sell " + sells[0] + " for " + sells[1] + sellUnit);
+												p.setLine(2, "§5" + "Sell " + sells[0] + " for " + sells[1] + sellUnit);
 											else
 												p.setLine(2, "Sell " + sells[0] + " for " + sells[1] + sellUnit);
 										}
 										else if (pHead)
 											p.setLine(2, "");
 										if (normal)
-											p.setLine(3, "�9" + player.getName());
+											p.setLine(3, "§9" + player.getName());
 										else
-											p.setLine(3, "�4Admin");
+											p.setLine(3, "§4Admin");
 										if (normal)
 											chestLoc.getBlock().setType(Material.CHEST);
 										player.sendMessage(ChatColor.DARK_PURPLE + "Successfully created GoldShop sign!");
@@ -2541,7 +2541,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 									if (MiscUtils.isInt(args[3])){
 										ItemStack is = new ItemStack(Material.BOOK, 1);
 										ItemMeta meta = is.getItemMeta();
-										meta.setDisplayName("�2Wallet");
+										meta.setDisplayName("§2Wallet");
 										is.setItemMeta(meta);
 										try {
 											File invF = new File(getDataFolder() + File.separator + "wallets", args[2] + ".inv");
@@ -2565,8 +2565,8 @@ public class GoldBank extends JavaPlugin implements Listener {
 										List<String> lore = new ArrayList<String>();
 										lore.add("Owned by");
 										lore.add(args[2]);
-										lore.add("�9Wallet #" + args[3]);
-										lore.add("�2GoldBank");
+										lore.add("§9Wallet #" + args[3]);
+										lore.add("§2GoldBank");
 										meta.setLore(lore);
 										is.setItemMeta(meta);
 										((Player)sender).getInventory().addItem(is);
@@ -2950,16 +2950,16 @@ public class GoldBank extends JavaPlugin implements Listener {
 		Block block = r.getRetractLocation().getBlock();
 		if (block.getType() == Material.WALL_SIGN || block.getType() == Material.SIGN_POST){
 			Sign sign = (Sign)block.getState();
-			if (sign.getLine(0).equalsIgnoreCase("�2[GoldBank]")){
+			if (sign.getLine(0).equalsIgnoreCase("§2[GoldBank]")){
 				r.setCancelled(true);
 			}
-			else if (sign.getLine(0).equalsIgnoreCase("�2[GoldATM]")){	
+			else if (sign.getLine(0).equalsIgnoreCase("§2[GoldATM]")){	
 				r.setCancelled(true);
 			}
 			String line = sign.getLine(0);
 			String rline = line.replace("[", "");
 			rline = rline.replace("]", "");
-			rline = rline.replace("�2", "");
+			rline = rline.replace("§2", "");
 			rline = rline.toUpperCase();
 			String[] matInfo = new String[2];
 			String data = null;
@@ -2987,16 +2987,16 @@ public class GoldBank extends JavaPlugin implements Listener {
 				adjblock = MiscUtils.getAdjacentBlock(block, Material.SIGN_POST);
 			}
 			Sign sign = (Sign)adjblock.getState();
-			if (sign.getLine(0).equalsIgnoreCase("�2[GoldBank]")){
+			if (sign.getLine(0).equalsIgnoreCase("§2[GoldBank]")){
 				r.setCancelled(true);
 			}
-			else if (sign.getLine(0).equalsIgnoreCase("�2[GoldATM]")){
+			else if (sign.getLine(0).equalsIgnoreCase("§2[GoldATM]")){
 				r.setCancelled(true);
 			}
 			String line = sign.getLine(0);
 			String rline = line.replace("[", "");
 			rline = rline.replace("]", "");
-			rline = rline.replace("�2", "");
+			rline = rline.replace("§2", "");
 			rline = rline.toUpperCase();
 			String[] matInfo = new String[2];
 			String data = null;
@@ -3018,16 +3018,16 @@ public class GoldBank extends JavaPlugin implements Listener {
 		else if (MiscUtils.getAdjacentBlock(block, Material.SIGN_POST) != null){
 			Block adjblock = MiscUtils.getAdjacentBlock(block, Material.SIGN_POST);
 			Sign sign = (Sign)adjblock.getState();
-			if (sign.getLine(0).equalsIgnoreCase("�2[GoldBank]")){
+			if (sign.getLine(0).equalsIgnoreCase("§2[GoldBank]")){
 				r.setCancelled(true);
 			}
-			else if (sign.getLine(0).equalsIgnoreCase("�2[GoldATM]")){
+			else if (sign.getLine(0).equalsIgnoreCase("§2[GoldATM]")){
 				r.setCancelled(true);
 			}
 			String line = sign.getLine(0);
 			String rline = line.replace("[", "");
 			rline = rline.replace("]", "");
-			rline = rline.replace("�2", "");
+			rline = rline.replace("§2", "");
 			rline = rline.toUpperCase();
 			String[] matInfo = new String[2];
 			String data = null;
@@ -3058,7 +3058,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 	public void onCraftPrepare(PrepareItemCraftEvent e){
 		ItemStack is = new ItemStack(Material.BOOK, 1);
 		ItemMeta meta = is.getItemMeta();
-		meta.setDisplayName("�2Wallet");
+		meta.setDisplayName("§2Wallet");
 		is.setItemMeta(meta);
 		if (e.getRecipe() instanceof ShapedRecipe){
 			if (((ShapedRecipe)e.getRecipe()).getResult().equals(is)){
@@ -3077,8 +3077,8 @@ public class GoldBank extends JavaPlugin implements Listener {
 						List<String> lore = new ArrayList<String>();
 						lore.add("Owned by");
 						lore.add(e.getViewers().get(0).getName());
-						lore.add("�9Wallet #" + nextKey);
-						lore.add("�2GoldBank");
+						lore.add("§9Wallet #" + nextKey);
+						lore.add("§2GoldBank");
 						meta.setLore(lore);
 						is.setItemMeta(meta);
 						e.getInventory().setResult(is);
@@ -3107,7 +3107,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 		if (e instanceof CraftItemEvent){
 			ItemStack is = new ItemStack(Material.BOOK, 1);
 			ItemMeta meta = is.getItemMeta();
-			meta.setDisplayName("�2Wallet");
+			meta.setDisplayName("§2Wallet");
 			is.setItemMeta(meta);
 			if (((CraftItemEvent)e).getRecipe().getResult().equals(is)){
 				if (e.isShiftClick())
@@ -3171,7 +3171,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 									is = e.getCursor();
 								}
 								ItemMeta meta = is.getItemMeta();
-								if (meta.getDisplayName().equals("�2Wallet"))
+								if (meta.getDisplayName().equals("§2Wallet"))
 									e.setCancelled(true);
 							}
 						}
