@@ -19,22 +19,6 @@ tiers:
   '3':
     size: 54
     fee: 0
-
-#Define fee for using [GoldATM] signs (in nuggets)
-atmfee: 0
-
-#Define maximum number of gold nuggets each mob should drop on death (0-256)
-mobdrops:
-  creeper: 3
-  zombie: 2
-  skeleton: 2
-  spider: 2
-  blaze: 3
-  enderman: 3
-  witch: 32
-  slime: 1
-  magmacube: 1
-  ghast: 9
   cavespider: 3
   enderdragon: 128
   zombiepigman: 1

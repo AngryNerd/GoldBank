@@ -1,4 +1,4 @@
-package net.amigocraft.GoldBank.api;
+﻿package net.amigocraft.GoldBank.api;
 
 import java.io.File;
 import java.util.HashMap;

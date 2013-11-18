@@ -1,4 +1,4 @@
-package net.amigocraft.GoldBank.util;
+﻿package net.amigocraft.GoldBank.util;
 
 import java.io.File;
 import java.sql.Connection;

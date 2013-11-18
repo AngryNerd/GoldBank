@@ -1,4 +1,4 @@
-package net.amigocraft.GoldBank.util;
+﻿package net.amigocraft.GoldBank.util;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -38,8 +38,10 @@ public class MiscUtils {
 		else
 			return false;
 	}
-
+	
+	@SuppressWarnings("deprecation")
 	public static boolean isMat(int m){
+		//TODO: Magic numbers. Because Bukkit said so.
 		if (Material.getMaterial(m) != null)
 			return true;
 		else
@@ -73,6 +75,8 @@ public class MiscUtils {
 			Block adjBlock = block.getRelative(face);
 			if (adjBlock.getType() == material){
 				if (face != BlockFace.UP){
+					@SuppressWarnings("deprecation")
+					//TODO: This doesn't even make any sense. How the hell is this a "magic number?"
 					byte data = adjBlock.getData();
 					byte north = 0x2;
 					byte south = 0x3;

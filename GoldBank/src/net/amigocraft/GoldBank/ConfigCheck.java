@@ -1,4 +1,4 @@
-package net.amigocraft.GoldBank;
+﻿package net.amigocraft.GoldBank;
 
 import java.io.File;
 import java.io.InputStream;
