@@ -1,4 +1,4 @@
-﻿package net.amigocraft.GoldBank.util;
+package net.amigocraft.GoldBank.util;
 
 import java.io.BufferedReader;
 import java.io.File;
