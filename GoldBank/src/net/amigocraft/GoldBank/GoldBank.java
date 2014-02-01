@@ -1,17 +1,8 @@
 package net.amigocraft.GoldBank;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
-import java.net.URI;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -19,13 +10,9 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
-import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.logging.Logger;
 
@@ -34,36 +21,28 @@ import net.amigocraft.GoldBank.economy.VaultConnector;
 import net.amigocraft.GoldBank.util.*;
 import net.milkbowl.vault.economy.Economy;
 
-import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.lang.WordUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.DyeColor;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
-import org.bukkit.block.BlockState;
 import org.bukkit.block.Chest;
 import org.bukkit.block.Sign;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
-import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.enchantments.Enchantment;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
-import org.bukkit.event.Event.Result;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
-import org.bukkit.event.block.BlockPistonExtendEvent;
 import org.bukkit.event.block.BlockPistonRetractEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.SignChangeEvent;
@@ -85,19 +64,16 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.ShapedRecipe;
-import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.inventory.meta.SkullMeta;
-import org.bukkit.material.MaterialData;
 import org.bukkit.metadata.FixedMetadataValue;
-import org.bukkit.metadata.MetadataValue;
 import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.ServicesManager;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.potion.PotionEffect;
+/**
+ * To whomever may be reviewing this plugin: I am so, so sorry.
+ */
 
-@SuppressWarnings("unused")
 public class GoldBank extends JavaPlugin implements Listener {
 	public static GoldBank plugin;
 	public Logger log;
@@ -300,12 +276,11 @@ public class GoldBank extends JavaPlugin implements Listener {
 	}
 
 	// initiate function for detecting player clicking sign
-	@SuppressWarnings("deprecation")
+	@SuppressWarnings({ "deprecation", "resource" })
 	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onClick(PlayerInteractEvent e){
 		if (e.getAction() == Action.RIGHT_CLICK_BLOCK || e.getAction() == Action.RIGHT_CLICK_AIR){
 			// check if wallet is in hand
-			boolean wallet = false;
 			if (e.getPlayer().getItemInHand().getType() == Material.BOOK){
 				ItemStack is = e.getPlayer().getItemInHand();
 				ItemMeta meta = is.getItemMeta();
@@ -314,7 +289,6 @@ public class GoldBank extends JavaPlugin implements Listener {
 						if (meta.getDisplayName().equals("§2Wallet") && meta.getLore().get(3).equals("§2GoldBank")){
 							// cancel the event because the item in hand is a wallet
 							e.setCancelled(true);
-							wallet = true;
 							boolean own = false;
 							if (meta.getLore().get(1).equals(e.getPlayer().getName()))
 								own = true;
@@ -337,7 +311,6 @@ public class GoldBank extends JavaPlugin implements Listener {
 									try {
 										invY.load(invF);
 										if (invY.isSet(Integer.toString(num))){
-											Set<String> keys = invY.getKeys(false);
 											ItemStack[] invI = new ItemStack[this.getConfig().getInt("walletsize")];
 											for (int i = 0; i < invI.length; i++){
 												String key = Integer.toString(num) + "." + i;
@@ -492,9 +465,9 @@ public class GoldBank extends JavaPlugin implements Listener {
 						}
 						finally {
 							try {
-								conn.close();
-								st.close();
 								rs.close();
+								st.close();
+								conn.close();
 							}
 							catch (Exception exc){
 								exc.printStackTrace();
@@ -509,7 +482,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 		}
 	}
 
-	@SuppressWarnings("deprecation")
+	@SuppressWarnings({ "deprecation", "resource" })
 	@EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
 	public void onOneClick(PlayerInteractEvent e){
 		// this code is here to prevent bugs when clicking a bank sign with a wallet
@@ -602,7 +575,6 @@ public class GoldBank extends JavaPlugin implements Listener {
 													int signX = sign.getX();
 													int signY = sign.getY();
 													int signZ = sign.getZ();
-													Location signLoc = new Location(player.getWorld(), signX, signY, signZ);
 													st.executeUpdate("INSERT INTO chestdata (username, world, x, y, z, sign, tier) VALUES ('" + p + "', '" + player.getWorld().getName() + "', '" + signX + "', '" + signY + "', '" + signZ + "', 'true', '" + tier + "')");
 													try {
 														File invF = new File(getDataFolder() + File.separator + "inventories", p + ".inv");
@@ -1132,10 +1104,8 @@ public class GoldBank extends JavaPlugin implements Listener {
 																	InventoryUtils.removeFromPlayerInv(player, sellIs.getType(), sellIs.getDurability(), sellIs.getAmount());
 																	if (!admin){
 																		int remaining = sellPrice;
-																		int removeB = 0;
 																		int blocks = InventoryUtils.getAmountInInv(chestInv, Material.GOLD_BLOCK, -1);
 																		int ingots = InventoryUtils.getAmountInInv(chestInv, Material.GOLD_INGOT, -1);
-																		int nuggets = InventoryUtils.getAmountInInv(chestInv, Material.GOLD_NUGGET, -1);
 																		if (sellPrice >= 9 && blocks >= 1){
 																			int remove = 0;
 																			if (blocks >= remaining / 81){
@@ -1144,7 +1114,6 @@ public class GoldBank extends JavaPlugin implements Listener {
 																			else {
 																				remove = blocks;
 																			}
-																			removeB = remove;
 																			InventoryUtils.removeFromInv(chestInv, Material.GOLD_BLOCK, 0, remove);
 																			remaining = sellPrice - (remove * 81);
 																		}
@@ -1425,17 +1394,11 @@ public class GoldBank extends JavaPlugin implements Listener {
 	}
 
 	// check if destroyed block is or holds GoldBank sign
+	@SuppressWarnings("resource")
 	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
 	public void onBlockBreak(BlockBreakEvent b){
 		if (b.getBlock().getType() == Material.WALL_SIGN || b.getBlock().getType() == Material.SIGN_POST){
 			Sign sign = (Sign)b.getBlock().getState();
-			Block adjBlock = null;
-			if (MiscUtils.getAdjacentBlock(b.getBlock(), Material.WALL_SIGN) != null){
-				adjBlock = MiscUtils.getAdjacentBlock(b.getBlock(), Material.WALL_SIGN);
-			}
-			else if (MiscUtils.getAdjacentBlock(b.getBlock(), Material.SIGN_POST)!= null){
-				adjBlock = MiscUtils.getAdjacentBlock(b.getBlock(), Material.SIGN_POST);
-			}
 			Connection conn = null;
 			Statement st = null;
 			ResultSet rs = null;
@@ -1493,9 +1456,9 @@ public class GoldBank extends JavaPlugin implements Listener {
 			}
 			finally {
 				try {
-					conn.close();
-					st.close();
 					rs.close();
+					st.close();
+					conn.close();
 				}
 				catch (Exception u){
 					u.printStackTrace();
@@ -1798,6 +1761,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 	}
 
 	// listen for chest open
+	@SuppressWarnings("resource")
 	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
 	public void onChestOpen(PlayerInteractEvent o){
 		if (o.getAction() == Action.RIGHT_CLICK_BLOCK){
@@ -1841,9 +1805,9 @@ public class GoldBank extends JavaPlugin implements Listener {
 				}
 				finally {
 					try {
-						conn.close();
-						st.close();
 						rs.close();
+						st.close();
+						conn.close();
 					}
 					catch (Exception u){
 						u.printStackTrace();
@@ -1871,11 +1835,9 @@ public class GoldBank extends JavaPlugin implements Listener {
 				rline = rline.replace("§2", "");
 				rline = rline.toUpperCase();
 				String[] matInfo = new String[2];
-				String data = null;
 				if (rline.contains(":")){
 					matInfo = rline.split(":");
 					rline = matInfo[0];
-					data = matInfo[1];
 				}
 				boolean isValidInt = false;
 				if (MiscUtils.isInt(rline)){
@@ -1898,11 +1860,9 @@ public class GoldBank extends JavaPlugin implements Listener {
 				rline = rline.replace("§2", "");
 				rline = rline.toUpperCase();
 				String[] matInfo = new String[2];
-				String data = null;
 				if (rline.contains(":")){
 					matInfo = rline.split(":");
 					rline = matInfo[0];
-					data = matInfo[1];
 				}
 				boolean isValidInt = false;
 				if (MiscUtils.isInt(rline)){
@@ -1936,11 +1896,9 @@ public class GoldBank extends JavaPlugin implements Listener {
 					rline = rline.replace("§2", "");
 					rline = rline.toUpperCase();
 					String[] matInfo = new String[2];
-					String data = null;
 					if (rline.contains(":")){
 						matInfo = rline.split(":");
 						rline = matInfo[0];
-						data = matInfo[1];
 					}
 					boolean isValidInt = false;
 					if (MiscUtils.isInt(rline)){
@@ -1957,7 +1915,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 	}
 
 	// check if placed sign meets criteria
-	@SuppressWarnings("deprecation")
+	@SuppressWarnings({ "deprecation", "resource" })
 	@EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
 	public void onSignChange(SignChangeEvent p){
 		Player player = p.getPlayer();
@@ -2339,9 +2297,9 @@ public class GoldBank extends JavaPlugin implements Listener {
 						}
 						finally {
 							try {
-								conn.close();
-								st.close();
 								rs.close();
+								st.close();
+								conn.close();
 							}
 							catch (Exception u){
 								u.printStackTrace();
@@ -2402,7 +2360,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 	}
 
 	// commands and stuff :D
-	@SuppressWarnings("deprecation")
+	@SuppressWarnings({ "deprecation", "resource" })
 	public boolean onCommand(CommandSender sender, Command cmd, String commandLabel, String[] args){
 		if (commandLabel.equalsIgnoreCase("gb")){
 			if (args.length >= 1){
@@ -2610,7 +2568,6 @@ public class GoldBank extends JavaPlugin implements Listener {
 															String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "chestdata.db";
 															conn = DriverManager.getConnection(dbPath);
 															st = conn.createStatement();
-															int count = 0;
 															shopLog.put(sender.getName(), shopId);
 															rs = st.executeQuery("SELECT COUNT(*) FROM shoplog WHERE shop = '" + shopId + "' AND action < '2'");
 															int total = 0;
@@ -2679,9 +2636,9 @@ public class GoldBank extends JavaPlugin implements Listener {
 														}
 														finally {
 															try {
-																conn.close();
-																st.close();
 																rs.close();
+																st.close();
+																conn.close();
 															}
 															catch (Exception exc){
 																exc.printStackTrace();
@@ -2787,12 +2744,9 @@ public class GoldBank extends JavaPlugin implements Listener {
 				}
 				YamlConfiguration invY = new YamlConfiguration();
 				invY.load(invF);
-				int size = this.getConfig().getInt("walletsize");
 				String root = "";
 				if (openType[index].equals("wallet"))
 					root = openWalletNo[index] + ".";
-				else
-					size = invY.getInt("size");
 				Inventory inv = c.getInventory();
 				for (int i = 0; i < c.getInventory().getSize(); i++){
 					invY.set(root + i, inv.getItem(i));
@@ -2893,8 +2847,6 @@ public class GoldBank extends JavaPlugin implements Listener {
 							dropItems(cNames.get(eType), world, loc, loot);
 							if (this.getConfig().getDouble("rare-drop-rate") != 0 && this.getConfig().getInt("mobdrops." + cNames.get(eType)) != 0 && !this.getConfig().getList("disable-rare-drops-for").contains(cNames.get(eType))){
 								double rand = Math.random();
-								double lootAdd = 1 + (loot * .5);
-								double rate = this.getConfig().getDouble("rare-drop-rate") * lootAdd;
 								if (rand <= this.getConfig().getDouble("rare-drop-rate")){
 									List<Material> rareGold = new ArrayList<Material>();
 									rareGold.add(Material.GOLD_INGOT);
@@ -2962,11 +2914,9 @@ public class GoldBank extends JavaPlugin implements Listener {
 			rline = rline.replace("§2", "");
 			rline = rline.toUpperCase();
 			String[] matInfo = new String[2];
-			String data = null;
 			if (rline.contains(":")){
 				matInfo = rline.split(":");
 				rline = matInfo[0];
-				data = matInfo[1];
 			}
 			boolean isValidInt = false;
 			if (MiscUtils.isInt(rline)){
@@ -2999,11 +2949,9 @@ public class GoldBank extends JavaPlugin implements Listener {
 			rline = rline.replace("§2", "");
 			rline = rline.toUpperCase();
 			String[] matInfo = new String[2];
-			String data = null;
 			if (rline.contains(":")){
 				matInfo = rline.split(":");
 				rline = matInfo[0];
-				data = matInfo[1];
 			}
 			boolean isValidInt = false;
 			if (MiscUtils.isInt(rline)){
@@ -3030,11 +2978,9 @@ public class GoldBank extends JavaPlugin implements Listener {
 			rline = rline.replace("§2", "");
 			rline = rline.toUpperCase();
 			String[] matInfo = new String[2];
-			String data = null;
 			if (rline.contains(":")){
 				matInfo = rline.split(":");
 				rline = matInfo[0];
-				data = matInfo[1];
 			}
 			boolean isValidInt = false;
 			if (MiscUtils.isInt(rline)){
