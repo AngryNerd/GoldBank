@@ -19,6 +19,7 @@ import java.util.logging.Logger;
 import net.amigocraft.GoldBank.api.BankInv;
 import net.amigocraft.GoldBank.economy.VaultConnector;
 import net.amigocraft.GoldBank.util.*;
+import net.amigocraft.GoldBank.Updater;
 import net.milkbowl.vault.economy.Economy;
 
 import org.apache.commons.lang.WordUtils;
@@ -95,7 +96,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 
 		// autoupdate
 		if (getConfig().getBoolean("enable-auto-update")){
-			try {new AutoUpdate(this);}
+			try {new Updater(this, 47431, this.getFile(), Updater.UpdateType.DEFAULT, true);}
 			catch (Exception e){e.printStackTrace();}
 		}
 
