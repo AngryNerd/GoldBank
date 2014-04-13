@@ -1,8 +1,11 @@
 package net.amigocraft.GoldBank.api;
 
+import static net.amigocraft.GoldBank.util.MiscUtils.*;
+
 import java.io.File;
 import java.util.HashMap;
 import java.util.Set;
+import java.util.UUID;
 
 import net.amigocraft.GoldBank.GoldBank;
 import net.amigocraft.GoldBank.util.InventoryUtils;
@@ -18,11 +21,12 @@ public class BankInv {
 
 	/**
 	 * Attempts to get the amount of gold in a specified player's bank inventory.
-	 * @param p The player who's bank inventory should be searched.
-	 * @return The amount of gold (in nuggets) contained by the specified player's bank inventory. Note: this method will return 0 if the player's bank inventory cannot be loaded.
+	 * @param player The UUID of the player who's bank inventory should be searched.
+	 * @return The amount of gold (in nuggets) contained by the specified player's bank inventory.
+	 * Note: this method will return 0 if the player's bank inventory cannot be loaded.
 	 */
-	public static int getGoldInBankInv(String p){
-		File invf = new File(InventoryUtils.plugin.getDataFolder() + File.separator + "inventories", p + ".inv");
+	public static int getGoldInBankInv(UUID player){
+		File invf = new File(InventoryUtils.plugin.getDataFolder() + File.separator + "inventories", player + ".dat");
 		if(invf.exists()){
 			YamlConfiguration invY = new YamlConfiguration();
 			try {
@@ -31,7 +35,7 @@ public class BankInv {
 				Set<String> keys = invY.getKeys(false);
 				ItemStack[] invI = new ItemStack[size];
 				for (String invN : keys){
-					if (!invN.equalsIgnoreCase("size")){
+					if (isInt(invN)){
 						int i = Integer.parseInt(invN);
 						invI[i] =  invY.getItemStack(invN);
 					}
@@ -59,15 +63,26 @@ public class BankInv {
 		else
 			return 0;
 	}
+	
+	/**
+	 * Attempts to get the amount of gold in a specified player's bank inventory.
+	 * @param player The username of the player who's bank inventory should be searched.
+	 * @return The amount of gold (in nuggets) contained by the specified player's bank inventory.
+	 * Note: this method will return 0 if the player's bank inventory cannot be loaded.
+	 */
+	public static int getGoldInBankInv(String player){
+		return getGoldInBankInv(getSafeUUID(player));
+	}
 
 	/**
 	 * Attempts to add a specific amount of gold (defined in nuggets) to a player's bank inventory.
-	 * @param p The player whose bank inventory should be modified.
+	 * @param player The UUID of the player whose bank inventory should be modified.
 	 * @param amount The amount of gold (in nuggets) to be added to the player's bank inventory.
-	 * @return Whether or not the gold was successfully added (returns false if not enough space is available or the player's bank inventory could not be loaded).
+	 * @return Whether or not the gold was successfully added
+	 * (returns false if not enough space is available or the player's bank inventory could not be loaded).
 	 */
-	public static boolean addGoldToBankInv(String p, int amount){
-		File invf = new File(InventoryUtils.plugin.getDataFolder() + File.separator + "inventories", p + ".inv");
+	public static boolean addGoldToBankInv(UUID player, int amount){
+		File invf = new File(InventoryUtils.plugin.getDataFolder() + File.separator + "inventories", player + ".dat");
 		if(invf.exists()){
 			YamlConfiguration invY = new YamlConfiguration();
 			try {
@@ -133,17 +148,28 @@ public class BankInv {
 		else
 			return false;
 	}
+	
+	/**
+	 * Attempts to add a specific amount of gold (defined in nuggets) to a player's bank inventory.
+	 * @param player The username of the player whose bank inventory should be modified.
+	 * @param amount The amount of gold (in nuggets) to be added to the player's bank inventory.
+	 * @return Whether or not the gold was successfully added
+	 * (returns false if not enough space is available or the player's bank inventory could not be loaded).
+	 */
+	public static boolean addGoldToBankInv(String player, int amount){
+		return addGoldToBankInv(getSafeUUID(player), amount);
+	}
 
 	/**
 	 * Attempts to remove a specific amount of gold (defined in nuggets) from a player's bank inventory.
-	 * @param p The username of the player who's bank inventory should be modified.
+	 * @param player The UUID of the player who's bank inventory should be modified.
 	 * @param amount The amount of gold (in nuggets) to be removed the player's bank inventory.
 	 * @return Whether or not the gold was successfully added (returns false if not enough gold is contained by the player's bank inventory)
 	 */
-	public static boolean removeGoldFromBankInv(String p, int amount){
-		int total = getGoldInBankInv(p);
+	public static boolean removeGoldFromBankInv(UUID player, int amount){
+		int total = getGoldInBankInv(player);
 		if (total >= amount){
-			File invf = new File(InventoryUtils.plugin.getDataFolder() + File.separator + "inventories", p + ".inv");
+			File invf = new File(InventoryUtils.plugin.getDataFolder() + File.separator + "inventories", player + ".dat");
 			if(invf.exists()){
 				YamlConfiguration invY = new YamlConfiguration();
 				try {
@@ -168,7 +194,7 @@ public class BankInv {
 							remaining -= (remaining / 81) * 81;
 							if (InventoryUtils.getAmountInInv(inv, Material.GOLD_BLOCK) > 0 && remaining > 0){
 								InventoryUtils.removeFromInv(inv, Material.GOLD_BLOCK, 0, 1);
-								addGoldToBankInv(p, 81 - remaining);
+								addGoldToBankInv(player, 81 - remaining);
 								remaining = 0;
 							}
 						}
@@ -184,7 +210,7 @@ public class BankInv {
 							InventoryUtils.removeFromInv(inv, Material.GOLD_INGOT, 0, remaining / 9);
 							if (InventoryUtils.getAmountInInv(inv, Material.GOLD_INGOT) > 0 && remaining > 0){
 								InventoryUtils.removeFromInv(inv, Material.GOLD_INGOT, 0, 1);
-								addGoldToBankInv(p, 9 - remaining);
+								addGoldToBankInv(player, 9 - remaining);
 								remaining = 0;
 							}
 						}
@@ -222,5 +248,15 @@ public class BankInv {
 		}
 		else
 			return false;
+	}
+	
+	/**
+	 * Attempts to remove a specific amount of gold (defined in nuggets) from a player's bank inventory.
+	 * @param player The username of the player who's bank inventory should be modified.
+	 * @param amount The amount of gold (in nuggets) to be removed the player's bank inventory.
+	 * @return Whether or not the gold was successfully added (returns false if not enough gold is contained by the player's bank inventory)
+	 */
+	public static boolean removeGoldFromBankInv(String player, int amount){
+		return removeGoldFromBankInv(getSafeUUID(player), amount);
 	}
 }

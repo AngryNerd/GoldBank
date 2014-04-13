@@ -5,23 +5,26 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.sql.Connection;
+/*import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
-import java.sql.Statement;
+import java.sql.Statement;*/
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 import net.amigocraft.GoldBank.GoldBank;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.entity.Player;
 
 public class MiscUtils {
-	
+
 	public static GoldBank plugin = GoldBank.plugin;
-	
+
 	public static boolean isInt(String i){
 		try {
 			Integer.parseInt(i);
@@ -38,7 +41,7 @@ public class MiscUtils {
 		else
 			return false;
 	}
-	
+
 	@SuppressWarnings("deprecation")
 	public static boolean isMat(int m){
 		//TODO: Magic numbers. Because Bukkit said so.
@@ -150,13 +153,13 @@ public class MiscUtils {
 		return mp.get(day).intValue();
 	}
 
-	public static boolean colExists(String table, String col){
+	/*public static boolean colExists(String table, String col){
 		Connection conn = null;
 		Statement st = null;
 		ResultSet rs = null;
 		try {
 			Class.forName("org.sqlite.JDBC");
-			String dbPath = "jdbc:sqlite:" + plugin.getDataFolder() + File.separator + "chestdata.db";
+			String dbPath = "jdbc:sqlite:" + plugin.getDataFolder() + File.separator + "data.db";
 			conn = DriverManager.getConnection(dbPath);
 			st = conn.createStatement();
 			rs = st.executeQuery("SELECT " + col + " FROM " + table + " LIMIT 1");
@@ -167,18 +170,65 @@ public class MiscUtils {
 		}
 		finally {
 			try {
-				conn.close();
-				st.close();
 				rs.close();
+				st.close();
+				conn.close();
 			}
 			catch (Exception n){
 				n.printStackTrace();
 			}
 		}
-	}
-	
+	}*/
+
 	public String escape(String s){
 		s = s.replace("'", "''");
 		return s;
+	}
+
+	public static UUID getSafeUUID(Player player){
+		try {
+			return UUIDFetcher.getUUID(player.getName());
+		}
+		catch (Exception ex){
+			ex.printStackTrace();
+		}
+		return null;
+	}
+
+	public static UUID getSafeUUID(String player){
+		try {
+			return UUIDFetcher.getUUID(player);
+		}
+		catch (Exception ex){
+			ex.printStackTrace();
+		}
+		return null;
+	}
+
+	@SuppressWarnings("deprecation")
+	public static Player getSafePlayer(UUID uuid){
+		if (GoldBank.UUID_SUPPORT)
+			return Bukkit.getPlayer(uuid);
+		else
+			try {
+				return Bukkit.getPlayer(NameFetcher.getUsername(uuid));
+			}
+		catch (Exception ex){
+			ex.printStackTrace();
+		}
+		return null;
+	}
+
+	public static String getSafePlayerName(UUID uuid){
+		if (GoldBank.UUID_SUPPORT)
+			return Bukkit.getOfflinePlayer(uuid).getName();
+		else
+			try {
+				return NameFetcher.getUsername(uuid);
+			}
+		catch (Exception ex){
+			ex.printStackTrace();
+		}
+		return null;
 	}
 }

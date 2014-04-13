@@ -6,6 +6,7 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.Set;
+import java.util.UUID;
 
 import net.amigocraft.GoldBank.GoldBank;
 
@@ -28,26 +29,27 @@ public class InventoryUtils {
 		int failed = 0;
 		try {
 			Class.forName("org.sqlite.JDBC");
-			String dbPath = "jdbc:sqlite:" + plugin.getDataFolder() + File.separator + "chestdata.db";
+			String dbPath = "jdbc:sqlite:" + plugin.getDataFolder() + File.separator + "data.db";
 			conn = DriverManager.getConnection(dbPath);
 			st = conn.createStatement();
-			rs = st.executeQuery("SELECT * FROM chestdata");
+			rs = st.executeQuery("SELECT * FROM banks");
 			while (rs.next()){
-				String p = rs.getString("username");
+				String p = rs.getString("uuid");
 				if (!p.equals("MASTER")){
-					File invF = new File(plugin.getDataFolder() + File.separator + "inventories" + File.separator + p + ".inv");
+					File invF = new File(plugin.getDataFolder() + File.separator + "inventories" + File.separator + p + ".dat");
 					YamlConfiguration invY = new YamlConfiguration();
 					invY.load(invF);
 					int size = invY.getInt("size");
 					Set<String> keys = invY.getKeys(false);
 					ItemStack[] invI = new ItemStack[size];
 					for (String invN : keys){
-						if (!invN.equalsIgnoreCase("size")){
+						if (MiscUtils.isInt(invN)){
 							int i = Integer.parseInt(invN);
 							invI[i] =  invY.getItemStack(invN);
 						}
 					}
-					Inventory inv = plugin.getServer().createInventory(null, size, p + "'s GoldBank Sign");
+					Inventory inv = plugin.getServer().createInventory(null, size, MiscUtils.getSafePlayerName(UUID.fromString(p)) +
+							"'s GoldBank");
 					inv.setContents(invI);
 					if (inv.contains(Material.GOLD_BLOCK) || inv.contains(Material.GOLD_INGOT) || inv.contains(Material.GOLD_NUGGET)){
 						int blocks = getAmountInInv(inv, Material.GOLD_BLOCK, -1);
@@ -99,7 +101,8 @@ public class InventoryUtils {
 				u.printStackTrace();
 			}
 		}
-		plugin.log.info(GoldBank.ANSI_GREEN + "[GoldBank] Successfully allocated interest to " + success + " chests. Failed to add interest to " + failed + " chests." + GoldBank.ANSI_WHITE);
+		plugin.log.info(GoldBank.ANSI_GREEN + "[GoldBank] Successfully allocated interest to " + success +
+				" accounts. Failed to add interest to " + failed + " accounts." + GoldBank.ANSI_WHITE);
 	}
 
 	// check amount of item in inventory

@@ -1,9 +1,12 @@
 package net.amigocraft.GoldBank;
 
+import static net.amigocraft.GoldBank.util.MiscUtils.*;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
@@ -14,12 +17,13 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.logging.Logger;
 
 import net.amigocraft.GoldBank.api.BankInv;
 import net.amigocraft.GoldBank.economy.VaultConnector;
-import net.amigocraft.GoldBank.util.*;
 import net.amigocraft.GoldBank.Updater;
+import net.amigocraft.GoldBank.util.InventoryUtils;
 import net.milkbowl.vault.economy.Economy;
 
 import org.apache.commons.lang.WordUtils;
@@ -71,28 +75,44 @@ import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.ServicesManager;
 import org.bukkit.plugin.java.JavaPlugin;
+
+import com.google.common.io.Files;
+
 /**
  * To whomever may be reviewing this plugin: I am so, so sorry.
  */
-
 public class GoldBank extends JavaPlugin implements Listener {
 	public static GoldBank plugin;
 	public Logger log;
 	public static String ANSI_RED = "\u001B[31m";
 	public static String ANSI_GREEN = "\u001B[32m";
 	public static String ANSI_WHITE = "\u001B[37m";
-	private String[] openPlayer = new String[256];
-	private String[] openingPlayer = new String[256];
+	private UUID[] openPlayer = new UUID[256];
+	private UUID[] openingPlayer = new UUID[256];
 	private String[] openType = new String[256];
 	private int[] openWalletNo = new int[256];
 	private int nextIndex = 0;
 	public HashMap<String, Integer> shopLog = new HashMap<String, Integer>();
 	public String header = "########################## #\n# GoldBank Configuration # #\n########################## #";
+	public static boolean UUID_SUPPORT = true;
 
+	@SuppressWarnings({"resource"})
 	@Override
 	public void onEnable(){
 
 		log = this.getLogger();
+
+		if (!Bukkit.getOnlineMode())
+			log.warning("Server is running in offline mode! Without proper authentication, GoldBank may not work correctly " +
+					"due to Minecraft's UUID system.");
+
+		try {
+			Bukkit.getOfflinePlayer(UUID.fromString("069a79f4-44e9-4726-a5be-fca90e38aaf5"));
+		}
+		catch (NoSuchMethodError ex){
+			UUID_SUPPORT = false;
+			log.info("Native UUID support not detected. Falling back to online API...");
+		}
 
 		// autoupdate
 		if (getConfig().getBoolean("enable-auto-update")){
@@ -171,36 +191,249 @@ public class GoldBank extends JavaPlugin implements Listener {
 		}
 
 		// create the plugin table if it does not exist and update older tables to take several updates into account
+		if (new File(getDataFolder(), "chestdata.db").exists())
+			new File(getDataFolder(), "chestdata.db").renameTo(new File(getDataFolder(), "data.db"));	
 		Connection conn = null;
 		Statement st = null;
+		Statement st2 = null;
+		ResultSet rs = null;
+		ResultSet rs2 = null;
 		try {
 			Class.forName("org.sqlite.JDBC");
-			String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "chestdata.db";
+			String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "data.db";
 			conn = DriverManager.getConnection(dbPath);
 			st = conn.createStatement();
-			st.executeUpdate("CREATE TABLE IF NOT EXISTS chestdata (" +
-					"id INTEGER NOT NULL PRIMARY KEY," +
-					"username VARCHAR(20) NOT NULL," +
-					"world VARCHAR(100) NOT NULL," +
-					"x INTEGER NOT NULL," +
-					"y INTEGER NOT NULL," +
-					"z INTEGER NOT NULL," +
-					"sign BOOLEAN NOT NULL," +
-					"tier INTEGER NOT NULL)");
-			if (!MiscUtils.colExists("chestdata", "sign")){
-				st.executeUpdate("ALTER TABLE chestdata ADD sign BOOLEAN DEFAULT 'false' NOT NULL");
-				st.executeUpdate("UPDATE chestdata SET y='y+1', sign='true'");
+			st2 = conn.createStatement();
+			boolean copyTable = false;
+			DatabaseMetaData md = conn.getMetaData();
+			rs = md.getTables(null, null, "%", null);
+			while (rs.next()){
+				if (rs.getString(3).equals("chestdata")){ // it's a pre-UUID table
+					copyTable = true;
+					break;
+				}
 			}
-			if (!MiscUtils.colExists("chestdata", "tier"))
-				st.executeUpdate("ALTER TABLE chestdata ADD tier BOOLEAN DEFAULT '1' NOT NULL");
-			if (!MiscUtils.colExists("chestdata", "world")){
+			if (copyTable){
+				log.warning("Detected old database tables!");
+				log.info("In Minecraft 1.7.6 and above, Mojang completely transitioned from using usernames to UUIDs. This "
+						+ "makes username data in GoldBank's database unreliable. Therefore, it must be converted before it "
+						+ "can be used with the plugin.");
+				log.info("A copy of the original database will be made in data.old.db. Use this in case something goes " +
+						"wrong, or if you need to downgrade to an earlier version of the plugin.");
+				log.info("Depending on how much data GoldBank has stored on this server, this process may take a while. "
+						+ "Feel free to make a pot of tea while it runs.");
+
+				Files.copy(new File(getDataFolder(), "data.db"), new File(getDataFolder(), "data.old.db"));
+
+				st.executeUpdate("CREATE TABLE IF NOT EXISTS banks (" +
+						"id INTEGER NOT NULL PRIMARY KEY," +
+						"uuid VARCHAR(36) NOT NULL," +
+						"world VARCHAR(100) NOT NULL," +
+						"x INTEGER NOT NULL," +
+						"y INTEGER NOT NULL," +
+						"z INTEGER NOT NULL," +
+						"sign BOOLEAN NOT NULL," +
+						"tier INTEGER NOT NULL)");
+				HashMap<String, String> uuids = new HashMap<String, String>();
+				rs2 = st2.executeQuery("SELECT COUNT(*) FROM chestdata");
+				int total = 0;
+				while (rs2.next()){
+					total = rs2.getInt(1);
+				}
+				log.info("Discovered " + total + " rows in table \"chestdata\"");
+				rs2 = st2.executeQuery("SELECT * FROM chestdata");
+				int i = 0;
+				int messages = 0;
+				while (rs2.next()){
+					String username = rs2.getString("username");
+					String uuid;
+					if (uuids.containsKey(username))
+						uuid = uuids.get(username);
+					else {
+						uuid = getSafeUUID(rs2.getString("username")).toString();
+						uuids.put(username, uuid);
+					}
+					st.executeUpdate("INSERT INTO banks (uuid, world, x, y, z, sign, tier) VALUES ('" +
+							getSafeUUID(rs2.getString("username")) + "', '" +
+							rs2.getString("world") + "', '" +
+							rs2.getInt("x") + "', '" +
+							rs2.getInt("y") + "', '" +
+							rs2.getInt("z") + "', '" +
+							"true', '" +
+							rs2.getString("tier") + "')");
+					if (i > (total / 10f) * (messages + 1)){
+						if (total == 0)
+							messages = 10;
+						else
+							messages = (int)Math.floor(i / (total / 10f));
+						log.info(messages * 10 + "% converted (" + i + " records processed)");
+					}
+					i += 1;
+				}
+				rs2.close();
+				st.executeUpdate("ALTER TABLE shops RENAME TO shops_old");
+				st.executeUpdate("CREATE TABLE IF NOT EXISTS shops (" +
+						"id INTEGER NOT NULL PRIMARY KEY," +
+						"creator VARCHAR(36) NOT NULL," +
+						"world VARCHAR(100) NOT NULL," +
+						"x INTEGER NOT NULL," +
+						"y INTEGER NOT NULL," +
+						"z INTEGER NOT NULL," +
+						"material INTEGER," +
+						"data INTEGER NOT NULL," +
+						"buyamount INTEGER NOT NULL," +
+						"buyprice INTEGER NOT NULL," +
+						"sellamount INTEGER NOT NULL," +
+						"sellprice INTEGER NOT NULL," +
+						"buyunit VARCHAR(1) NOT NULL," +
+						"sellunit VARCHAR(1) NOT NULL," +
+						"admin BOOLEAN NOT NULL)");
+				st.executeUpdate("INSERT INTO shops (id, creator, world, x, y, z, material, data, buyamount, buyprice, " +
+						"sellamount, sellprice, buyunit, sellunit, admin) SELECT id, creator, world, x, y, z, material, " +
+						"data, buyamount, buyprice, sellamount, sellprice, buyunit, sellunit, admin FROM shops_old");
+				rs2 = st2.executeQuery("SELECT COUNT(*) FROM shops");
+				while (rs2.next()){
+					total = rs2.getInt(1);
+				}
+				log.info("Discovered " + total + " rows in table \"shops\"");
+				rs2 = st2.executeQuery("SELECT * FROM shops");
+				i = 0;
+				messages = 0;
+				while (rs2.next()){
+					String username = rs2.getString("creator");
+					String uuid;
+					if (uuids.containsKey(username))
+						uuid = uuids.get(username);
+					else {
+						uuid = getSafeUUID(username).toString();
+						uuids.put(username, uuid);
+					}
+					st.executeUpdate("UPDATE shops SET creator = '" + getSafeUUID(rs2.getString("creator")) +
+							"' WHERE id = '" + rs2.getInt("id") + "'");
+					if (i > (total / 10f) * (messages + 1)){
+						if (total == 0)
+							messages = 10;
+						else
+							messages = (int)Math.floor(i / (total / 10f));
+						log.info(messages * 10 + "% converted (" + i + " records processed)");
+					}
+					i += 1;
+				}
+				rs2.close();
+				st.executeUpdate("ALTER TABLE shoplog RENAME TO shoplog_old");
+				st.executeUpdate("CREATE TABLE shoplog (" +
+						"id INTEGER NOT NULL PRIMARY KEY," +
+						"shop INTEGER NOT NULL," +
+						"player VARCHAR(36) NOT NULL," +
+						"action INTEGER NOT NULL," +
+						"material INTEGER," +
+						"data INTEGER," +
+						"quantity INTEGER," +
+						"time INTEGER)");
+				st.executeUpdate("INSERT INTO shoplog (id, shop, player, action, material, data, quantity, time)" +
+						"SELECT id, shop, player, action, material, data, quantity, time FROM shoplog_old");
+				rs2 = st2.executeQuery("SELECT COUNT(*) FROM shoplog_old");
+				while (rs2.next()){
+					total = rs2.getInt(1);
+				}
+				log.info("Discovered " + total + " rows in table \"shoplog\"");
+				rs2 = st2.executeQuery("SELECT * FROM shoplog");
+				i = 0;
+				messages = 0;
+				while (rs2.next()){
+					String username = rs2.getString("player");
+					String uuid;
+					if (uuids.containsKey(username))
+						uuid = uuids.get(username);
+					else {
+						uuid = getSafeUUID(username).toString();
+						uuids.put(username, uuid);
+					}
+					st.executeUpdate("UPDATE shoplog SET player = '" + getSafeUUID(rs2.getString("player")) +
+							"' WHERE id = '" + rs2.getInt("id") + "'");
+					if (i > (total / 10f) * (messages + 1)){
+						if (total == 0)
+							messages = 10;
+						else
+							messages = (int)Math.floor(i / (total / 10f));
+						log.info(messages * 10 + "% converted (" + i + " records processed)");
+					}
+					i += 1;
+				}
+				rs2.close();
+				st2.close();
+				conn.close();
+				Class.forName("org.sqlite.JDBC");
+				conn = DriverManager.getConnection(dbPath);
+				st = conn.createStatement();
+				st.executeUpdate("DROP TABLE chestdata");
+				st.executeUpdate("DROP TABLE shops_old");
+				st.executeUpdate("DROP TABLE shoplog_old");
+				log.info("Finished converting tables! :)");
+				log.info("Now we need to rename the data files. This shouldn't take very long. How was your tea, by the way?");
+				for (File f : new File(getDataFolder(), "inventories").listFiles()){
+					String username = f.getName().split("\\.")[0];
+					String uuid;
+					if (uuids.containsKey(username))
+						uuid = uuids.get(username);
+					else {
+						uuid = getSafeUUID(username).toString();
+						uuids.put(username, uuid);
+					}
+					YamlConfiguration y = new YamlConfiguration();
+					y.load(f);
+					y.set("username", username);
+					y.save(f);
+					y = null;
+					f.renameTo(new File(getDataFolder() + File.separator + "inventories", uuid + ".dat"));
+				}
+				for (File f : walletDir.listFiles()){
+					String username = f.getName().split("\\.")[0];
+					String uuid;
+					if (uuids.containsKey(username))
+						uuid = uuids.get(username);
+					else {
+						uuid = getSafeUUID(username).toString();
+						uuids.put(username, uuid);
+					}
+					YamlConfiguration y = new YamlConfiguration();
+					y.load(f);
+					y.set("username", username);
+					y.save(f);
+					y = null;
+					f.renameTo(new File(getDataFolder() + File.separator + "wallets", uuid + ".dat"));
+				}
+				uuids.clear();
+				log.info("Thanks for your patience. We've converted all data to the new format, so you should be good to go. :)");
+			}
+			else
+				st.executeUpdate("CREATE TABLE IF NOT EXISTS banks (" +
+						"id INTEGER NOT NULL PRIMARY KEY," +
+						"uuid VARCHAR(36) NOT NULL," +
+						"world VARCHAR(100) NOT NULL," +
+						"x INTEGER NOT NULL," +
+						"y INTEGER NOT NULL," +
+						"z INTEGER NOT NULL," +
+						"sign BOOLEAN NOT NULL," +
+						"tier INTEGER NOT NULL)");
+			try {
+				st.executeUpdate("ALTER TABLE banks ADD sign BOOLEAN DEFAULT 'false' NOT NULL");
+				st.executeUpdate("UPDATE banks SET y='y+1', sign='true'");
+			}
+			catch (Exception ex){}
+			try {
+				st.executeUpdate("ALTER TABLE banks ADD tier BOOLEAN DEFAULT '1' NOT NULL");
+			}
+			catch (Exception ex){}
+			try {
 				String world = getServer().getWorlds().get(0).getName();
-				st.executeUpdate("ALTER TABLE chestdata ADD world VARCHAR(100) DEFAULT 'world' NOT NULL");
-				st.executeUpdate("UPDATE chestdata SET world = '" + world + "'");
+				st.executeUpdate("ALTER TABLE banks ADD world VARCHAR(100) DEFAULT 'world' NOT NULL");
+				st.executeUpdate("UPDATE banks SET world = '" + world + "'");
 			}
+			catch (Exception ex){}
 			st.executeUpdate("CREATE TABLE IF NOT EXISTS shops (" +
 					"id INTEGER NOT NULL PRIMARY KEY," +
-					"creator VARCHAR(20) NOT NULL," +
+					"creator VARCHAR(36) NOT NULL," +
 					"world VARCHAR(100) NOT NULL," +
 					"x INTEGER NOT NULL," +
 					"y INTEGER NOT NULL," +
@@ -215,19 +448,24 @@ public class GoldBank extends JavaPlugin implements Listener {
 					"sellunit VARCHAR(1) NOT NULL," +
 					"admin BOOLEAN NOT NULL)");
 			st.executeUpdate("DROP TABLE IF EXISTS nbt");
-			if (!MiscUtils.colExists("shops", "world")){
+			try {
 				String world = getServer().getWorlds().get(0).getName();
 				st.executeUpdate("ALTER TABLE shops ADD world VARCHAR(100) DEFAULT 'world' NOT NULL");
 				st.executeUpdate("UPDATE shops SET world = '" + world + "'");
 			}
-			if (!MiscUtils.colExists("shops", "buyunit"))
+			catch (Exception ex){}
+			try {
 				st.executeUpdate("ALTER TABLE shops ADD buyunit VARCHAR(1) DEFAULT 'i' NOT NULL");
-			if (!MiscUtils.colExists("shops", "sellunit"))
+			}
+			catch (Exception ex){}
+			try {
 				st.executeUpdate("ALTER TABLE shops ADD sellunit VARCHAR(1) DEFAULT 'i' NOT NULL");
+			}
+			catch (Exception ex){}
 			st.executeUpdate("CREATE TABLE IF NOT EXISTS shoplog (" +
 					"id INTEGER NOT NULL PRIMARY KEY," +
 					"shop INTEGER NOT NULL," +
-					"player VARCHAR(20) NOT NULL," +
+					"player VARCHAR(36) NOT NULL," +
 					"action INTEGER NOT NULL," +
 					"material INTEGER," +
 					"data INTEGER," +
@@ -239,6 +477,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 		}
 		finally {
 			try {
+				rs.close();
 				st.close();
 				conn.close();
 			}
@@ -255,7 +494,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 		boolean first = true;
 		for (int i = 0; i < openingPlayer.length; i++){
 			if (openType[i] != null){
-				Player p = getServer().getPlayer(openingPlayer[i]);
+				Player p = getSafePlayer(openingPlayer[i]);
 				if (p != null){
 					p.closeInventory();
 					p.sendMessage(ChatColor.RED + WordUtils.capitalize(openType[i]) + " automatically closed by reload");
@@ -306,7 +545,8 @@ public class GoldBank extends JavaPlugin implements Listener {
 									numStr = numStr + Character.toString(chars[i]);
 								}
 								int num = Integer.parseInt(numStr);
-								File invF = new File(getDataFolder() + File.separator + "wallets", owner + ".inv");
+								UUID ownerUUID = getSafeUUID(owner);
+								File invF = new File(getDataFolder() + File.separator + "wallets", ownerUUID + ".dat");
 								if(invF.exists()){
 									YamlConfiguration invY = new YamlConfiguration();
 									try {
@@ -317,11 +557,12 @@ public class GoldBank extends JavaPlugin implements Listener {
 												String key = Integer.toString(num) + "." + i;
 												invI[i] =  invY.getItemStack(key);
 											}
-											Inventory inv = this.getServer().createInventory(null, this.getConfig().getInt("walletsize"), owner + "'s Wallet - #" + numStr);
+											Inventory inv = this.getServer().createInventory(null, this.getConfig().getInt("walletsize"),
+													owner + "'s Wallet - #" + numStr);
 											inv.setContents(invI);
 											e.getPlayer().openInventory(inv);
-											openPlayer[nextIndex] = owner;
-											openingPlayer[nextIndex] = e.getPlayer().getName();
+											openPlayer[nextIndex] = ownerUUID;
+											openingPlayer[nextIndex] = getSafeUUID(e.getPlayer().getName());
 											openType[nextIndex] = "wallet";
 											openWalletNo[nextIndex] = num;
 											nextIndex += 1;
@@ -385,7 +626,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 						ResultSet rs = null;
 						try {
 							Class.forName("org.sqlite.JDBC");
-							String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "chestdata.db";
+							String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "data.db";
 							conn = DriverManager.getConnection(dbPath);
 							st = conn.createStatement();
 							String world = e.getClickedBlock().getWorld().getName();
@@ -445,7 +686,11 @@ public class GoldBank extends JavaPlugin implements Listener {
 												sec = "0" + sec;
 											String dateStr = cal.get(Calendar.YEAR) + "-" + month + "-" + day + " " + hour + ":" + min + ":" + sec;
 											//TODO: Phase out "magic numbers" (seriously Bukkit?)
-											e.getPlayer().sendMessage(ChatColor.DARK_PURPLE + Integer.toString(i) + ") " + ChatColor.DARK_AQUA + dateStr + " " + ChatColor.LIGHT_PURPLE + rs.getString("player") + " " + actionColor + action + " " + ChatColor.GOLD + rs.getInt("quantity") + " " + Material.getMaterial(rs.getInt("material")).toString() + data);
+											e.getPlayer().sendMessage(ChatColor.DARK_PURPLE + Integer.toString(i) + ") " +
+													ChatColor.DARK_AQUA + dateStr + " " + ChatColor.LIGHT_PURPLE +
+													getSafePlayerName(UUID.fromString(rs.getString("player"))) + " " +
+													actionColor + action + " " + ChatColor.GOLD + rs.getInt("quantity") + " " +
+													Material.getMaterial(rs.getInt("material")).toString() + data);
 											rs.next();
 										}
 										else
@@ -511,6 +756,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 					if (e.getClickedBlock().getType() == Material.WALL_SIGN || e.getClickedBlock().getType() == Material.SIGN_POST){
 						Player player = e.getPlayer();
 						String p = player.getName();
+						UUID pUUID = getSafeUUID(p);
 						Sign sign = (Sign) e.getClickedBlock().getState();
 						String fline = sign.getLine(0);
 						if (fline.equalsIgnoreCase("§2[GoldBank]")){
@@ -521,27 +767,27 @@ public class GoldBank extends JavaPlugin implements Listener {
 								Statement st = null;
 								try {
 									Class.forName("org.sqlite.JDBC");
-									String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "chestdata.db";
+									String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "data.db";
 									conn = DriverManager.getConnection(dbPath);
 									st = conn.createStatement();
 									String checkWorld = e.getClickedBlock().getWorld().getName();
 									int checkX = e.getClickedBlock().getX();
 									int checkY = e.getClickedBlock().getY();
 									int checkZ = e.getClickedBlock().getZ();
-									rs = st.executeQuery("SELECT COUNT(*) FROM chestdata WHERE world = '" + checkWorld + "' AND x = '" + checkX + "' AND y = '" + checkY + "' AND z = '" + checkZ + "'");
+									rs = st.executeQuery("SELECT COUNT(*) FROM banks WHERE world = '" + checkWorld + "' AND x = '" + checkX + "' AND y = '" + checkY + "' AND z = '" + checkZ + "'");
 									int regcount = 0;
 									while (rs.next()){
 										regcount = rs.getInt(1);
 									}
 									boolean master = false;
-									rs = st.executeQuery("SELECT COUNT(*) FROM chestdata WHERE world = '" + checkWorld + "' AND x = '" + checkX + "' AND y = '" + checkY + "' AND z = '" + checkZ + "' AND username = 'MASTER'");
+									rs = st.executeQuery("SELECT COUNT(*) FROM banks WHERE world = '" + checkWorld + "' AND x = '" + checkX + "' AND y = '" + checkY + "' AND z = '" + checkZ + "' AND uuid = 'MASTER'");
 									int masterCount = 0;
 									while (rs.next()){
 										masterCount = rs.getInt(1);
 									}
 									if (masterCount != 0)
 										master = true;
-									rs = st.executeQuery("SELECT COUNT(*) FROM chestdata WHERE username = '" + p + "'");
+									rs = st.executeQuery("SELECT COUNT(*) FROM banks WHERE uuid = '" + pUUID + "'");
 									int fpcount = 0;
 									while (rs.next()){
 										fpcount = rs.getInt(1);
@@ -551,7 +797,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 											int tier = 1;
 											if (sign.getLine(1).length() >= 6){
 												if (sign.getLine(1).substring(0, 6).equalsIgnoreCase("§4Tier")){
-													if (MiscUtils.isInt(sign.getLine(1).substring(7, 8))){
+													if (isInt(sign.getLine(1).substring(7, 8))){
 														if (getConfig().isSet("tiers." + Integer.parseInt(sign.getLine(1).substring(7, 8)) + ".size")){
 															if (getConfig().isSet("tiers." + Integer.parseInt(sign.getLine(1).substring(7, 8)) + ".fee")){
 																tier = Integer.parseInt(sign.getLine(1).substring(7, 8));
@@ -576,9 +822,9 @@ public class GoldBank extends JavaPlugin implements Listener {
 													int signX = sign.getX();
 													int signY = sign.getY();
 													int signZ = sign.getZ();
-													st.executeUpdate("INSERT INTO chestdata (username, world, x, y, z, sign, tier) VALUES ('" + p + "', '" + player.getWorld().getName() + "', '" + signX + "', '" + signY + "', '" + signZ + "', 'true', '" + tier + "')");
+													st.executeUpdate("INSERT INTO banks (uuid, world, x, y, z, sign, tier) VALUES ('" + pUUID + "', '" + player.getWorld().getName() + "', '" + signX + "', '" + signY + "', '" + signZ + "', 'true', '" + tier + "')");
 													try {
-														File invF = new File(getDataFolder() + File.separator + "inventories", p + ".inv");
+														File invF = new File(getDataFolder() + File.separator + "inventories", pUUID + ".dat");
 														if (!invF.exists()){
 															invF.createNewFile();
 														}
@@ -632,17 +878,18 @@ public class GoldBank extends JavaPlugin implements Listener {
 										if (player.hasPermission("goldbank.sign.bank.use")){
 											try {
 												rs.close();
-												rs = st.executeQuery("SELECT COUNT(*) FROM chestdata WHERE x = '" + checkX + "' AND y = '" + checkY + "' AND z = '" + checkZ + "' AND username = '" + p + "'");
+												rs = st.executeQuery("SELECT COUNT(*) FROM banks WHERE x = '" + checkX + "' AND y = '" + checkY + "' AND z = '" + checkZ + "' AND uuid = '" + getSafeUUID(p) + "'");
 												int pcount = 0;
 												while (rs.next()){
 													pcount = rs.getInt(1);
 												}
 												if (pcount == 1 || (player.hasPermission("goldbank.sign.bank.use.others") && !master)){
-													rs = st.executeQuery("SELECT * FROM chestdata WHERE username = '" + p + "'");
+													rs = st.executeQuery("SELECT * FROM banks WHERE uuid = '" + pUUID + "'");
 													if (!master)
-														rs = st.executeQuery("SELECT * FROM chestdata WHERE world = '" + checkWorld + "' AND x = '" + checkX + "' AND y = '" + checkY + "' AND z = '" + checkZ + "'");
-													String dp = rs.getString("username");
-													File invF = new File(getDataFolder() + File.separator + "inventories", dp + ".inv");
+														rs = st.executeQuery("SELECT * FROM banks WHERE world = '" + checkWorld + "' AND x = '" + checkX + "' AND y = '" + checkY + "' AND z = '" + checkZ + "'");
+													UUID dpUUID = UUID.fromString(rs.getString("uuid"));
+													String dp = getSafePlayerName(dpUUID);
+													File invF = new File(getDataFolder() + File.separator + "inventories", dpUUID + ".dat");
 													if(invF.exists()){
 														YamlConfiguration invY = new YamlConfiguration();
 														invY.load(invF);
@@ -650,7 +897,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 														Set<String> keys = invY.getKeys(false);
 														ItemStack[] invI = new ItemStack[size];
 														for (String invN : keys){
-															if (!invN.equalsIgnoreCase("size")){
+															if (isInt(invN)){
 																int i = Integer.parseInt(invN);
 																invI[i] =  invY.getItemStack(invN);
 															}
@@ -658,13 +905,14 @@ public class GoldBank extends JavaPlugin implements Listener {
 														Inventory inv = this.getServer().createInventory(null, size, dp + "'s GoldBank Sign");
 														inv.setContents(invI);
 														player.openInventory(inv);
-														openPlayer[nextIndex] = dp;
-														openingPlayer[nextIndex] = p;
+														openPlayer[nextIndex] = dpUUID;
+														openingPlayer[nextIndex] = pUUID;
 														openType[nextIndex] = "bank";
 														nextIndex += 1;
 													}
 												}
 												else {
+													System.out.println(p + ", " + getSafeUUID(p));
 													if (!master)
 														player.sendMessage(ChatColor.RED + "This Bank Sign does not belong to you!");
 													else
@@ -702,7 +950,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 								}
 							}
 							else {
-								player.sendMessage(ChatColor.RED + "Oh noes! You don't have permission to do this! :(");
+								player.sendMessage(ChatColor.RED + "You don't have permission to do this!");
 							}
 						}
 						else if (fline.equalsIgnoreCase("§2[GoldATM]")){
@@ -731,10 +979,10 @@ public class GoldBank extends JavaPlugin implements Listener {
 								Statement st = null;
 								try {
 									Class.forName("org.sqlite.JDBC");
-									String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "chestdata.db";
+									String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "data.db";
 									conn = DriverManager.getConnection(dbPath);
 									st = conn.createStatement();
-									rs = st.executeQuery("SELECT COUNT(*) FROM chestdata WHERE username = '" + p + "'");
+									rs = st.executeQuery("SELECT COUNT(*) FROM banks WHERE uuid = '" + pUUID + "'");
 									int count = 0;
 									while (rs.next()){
 										count = rs.getInt(1);
@@ -748,7 +996,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 											else {
 												player.sendMessage(ChatColor.DARK_PURPLE + "This one's on us!");
 											}
-											File invF = new File(getDataFolder() + File.separator + "inventories", p + ".inv");
+											File invF = new File(getDataFolder() + File.separator + "inventories", pUUID + ".dat");
 											if(invF.exists()){
 												YamlConfiguration invY = new YamlConfiguration();
 												invY.load(invF);
@@ -756,7 +1004,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 												Set<String> keys = invY.getKeys(false);
 												ItemStack[] invI = new ItemStack[size];
 												for (String invN : keys){
-													if (!invN.equalsIgnoreCase("size")){
+													if (isInt(invN)){
 														int i = Integer.parseInt(invN);
 														invI[i] =  invY.getItemStack(invN);
 													}
@@ -764,8 +1012,8 @@ public class GoldBank extends JavaPlugin implements Listener {
 												Inventory inv = this.getServer().createInventory(null, size, p + "'s GoldBank Sign");
 												inv.setContents(invI);
 												player.openInventory(inv);
-												openPlayer[nextIndex] = p;
-												openingPlayer[nextIndex] = p;
+												openPlayer[nextIndex] = pUUID;
+												openingPlayer[nextIndex] = pUUID;
 												openType[nextIndex] = "bank";
 												nextIndex += 1;
 											}
@@ -793,7 +1041,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 								}
 							}
 							else {
-								player.sendMessage(ChatColor.RED + "Oh noes! You don't have permission to do this! :(");
+								player.sendMessage(ChatColor.RED + "You don't have permission to do this!");
 							}
 						}
 						int i = 0;
@@ -802,7 +1050,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 						ResultSet rs = null;
 						try {
 							Class.forName("org.sqlite.JDBC");
-							String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "chestdata.db";
+							String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "data.db";
 							conn = DriverManager.getConnection(dbPath);
 							st = conn.createStatement();
 							rs = st.executeQuery("SELECT COUNT(*) FROM shops WHERE world = '" + e.getClickedBlock().getWorld().getName() + "' AND x = '" + e.getClickedBlock().getX() + "' AND y = '" + e.getClickedBlock().getY() + "' AND z = '" + e.getClickedBlock().getZ() + "'");
@@ -833,7 +1081,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 								if (player.hasPermission("goldbank.sign.shop.use")){
 									try {
 										Class.forName("org.sqlite.JDBC");
-										String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "chestdata.db";
+										String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "data.db";
 										conn = DriverManager.getConnection(dbPath);
 										st = conn.createStatement();
 										rs = st.executeQuery("SELECT * FROM shops WHERE world = '" + e.getClickedBlock().getWorld().getName() + "' AND x = '" + e.getClickedBlock().getX() + "' AND y = '" + e.getClickedBlock().getY() + "' AND z = '" + e.getClickedBlock().getZ() + "'");
@@ -1009,7 +1257,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 																}
 																inv.addItem(new ItemStack[] {buyIs});
 																player.updateInventory();
-																st.executeUpdate("INSERT INTO shoplog (shop, player, action, material, data, quantity, time) VALUES ('" + shopId + "', '" + player.getName() + "', '0', '" + matId + "', '" + dataValue + "', '" + buyIs.getAmount() + "', '" + System.currentTimeMillis() / 1000 + "')");
+																st.executeUpdate("INSERT INTO shoplog (shop, player, action, material, data, quantity, time) VALUES ('" + shopId + "', '" + getSafeUUID(player) + "', '0', '" + matId + "', '" + dataValue + "', '" + buyIs.getAmount() + "', '" + System.currentTimeMillis() / 1000 + "')");
 																String buyPriceS = "s";
 																if (buyPrice / buyMult == 1)
 																	buyPriceS = "";
@@ -1021,13 +1269,13 @@ public class GoldBank extends JavaPlugin implements Listener {
 																player.sendMessage(ChatColor.DARK_PURPLE + "You bought " + buyAmount + " " + forMatName + " for " + buyPrice / buyMult + " golden " + unit + buyPriceS + "!");
 															}
 															else
-																player.sendMessage(ChatColor.DARK_PURPLE + "Oh noes! You don't have enough open slots in your inventory!");
+																player.sendMessage(ChatColor.DARK_PURPLE + "You don't have enough open slots in your inventory!");
 														}
 														else
-															player.sendMessage(ChatColor.DARK_PURPLE + "Oh noes! You don't have enough gold to buy that!");
+															player.sendMessage(ChatColor.DARK_PURPLE + "You don't have enough gold to buy that!");
 													}
 													else
-														player.sendMessage(ChatColor.DARK_PURPLE + "Error: The associated chest does not have enough " + forMatName + "!");
+														player.sendMessage(ChatColor.DARK_PURPLE + "The associated chest does not have enough " + forMatName + "!");
 												}
 												else
 													player.sendMessage(ChatColor.DARK_PURPLE + "You may not buy from this sign!");
@@ -1097,7 +1345,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 														if (newTool){
 															boolean validSell = true;
 															if (!admin)
-																if (((InventoryUtils.getAmountInInv(chestInv, Material.GOLD_NUGGET, -1)) + (InventoryUtils.getAmountInInv(chestInv, Material.GOLD_INGOT, -1) * 9) + (InventoryUtils.getAmountInInv(chestInv, Material.GOLD_BLOCK, -1) * 81)) / 9 < sellPrice)
+																if (((InventoryUtils.getAmountInInv(chestInv, Material.GOLD_NUGGET, -1)) + (InventoryUtils.getAmountInInv(chestInv, Material.GOLD_INGOT, -1) * 9) + (InventoryUtils.getAmountInInv(chestInv, Material.GOLD_BLOCK, -1) * 81)) < sellPrice)
 																	validSell = false;
 															if (validSell){
 																Inventory inv = player.getInventory();
@@ -1177,7 +1425,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 																		inv.addItem(new ItemStack[] {
 																				addNuggets});
 																	player.updateInventory();
-																	st.executeUpdate("INSERT INTO shoplog (shop, player, action, material, data, quantity, time) VALUES ('" + shopId + "', '" + player.getName() + "', '1', '" + mat.getId() + "', '" + dataValue + "', '" + sellIs.getAmount() + "', '" + System.currentTimeMillis() / 1000 + "')");
+																	st.executeUpdate("INSERT INTO shoplog (shop, player, action, material, data, quantity, time) VALUES ('" + shopId + "', '" + getSafeUUID(player) + "', '1', '" + mat.getId() + "', '" + dataValue + "', '" + sellIs.getAmount() + "', '" + System.currentTimeMillis() / 1000 + "')");
 																	String sellPriceS = "s";
 																	if (sellPrice / sellMult == 1)
 																		sellPriceS = "";
@@ -1201,7 +1449,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 														player.sendMessage(ChatColor.DARK_PURPLE + "You may not sell to this sign!");
 												}
 												else
-													player.sendMessage(ChatColor.DARK_PURPLE + "You must have gold or " + forMatName + " in your hand to use this sign!");
+													player.sendMessage(ChatColor.DARK_PURPLE + "You must have gold or " + forMatName + "(s) in your hand to use this sign!");
 											}
 										}
 										else {
@@ -1227,7 +1475,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 									}
 								}
 								else
-									player.sendMessage(ChatColor.RED + "Oh noes! You don't have permission to use this sign! :(");
+									player.sendMessage(ChatColor.RED + "You don't have permission to use this sign!");
 							}
 						}
 					}
@@ -1248,16 +1496,16 @@ public class GoldBank extends JavaPlugin implements Listener {
 				ResultSet rs = null;
 				try {
 					Class.forName("org.sqlite.JDBC");
-					String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "chestdata.db";
+					String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "data.db";
 					conn = DriverManager.getConnection(dbPath);
 					st = conn.createStatement();
-					rs = st.executeQuery("SELECT COUNT(*) FROM chestdata WHERE world = '" + blockWorld + "' AND x = '" + blockX + "' AND y = '" + blockY + "' AND z = '" + blockZ + "'");
+					rs = st.executeQuery("SELECT COUNT(*) FROM banks WHERE world = '" + blockWorld + "' AND x = '" + blockX + "' AND y = '" + blockY + "' AND z = '" + blockZ + "'");
 					int count = 0;
 					while (rs.next()){
 						count = rs.getInt(1);
 					}
 					boolean master = false;
-					rs = st.executeQuery("SELECT COUNT(*) FROM chestdata WHERE world = '" + blockWorld + "' AND x = '" + blockX + "' AND y = '" + blockY + "' AND z = '" + blockZ + "' AND username = 'MASTER'");
+					rs = st.executeQuery("SELECT COUNT(*) FROM banks WHERE world = '" + blockWorld + "' AND x = '" + blockX + "' AND y = '" + blockY + "' AND z = '" + blockZ + "' AND uuid = 'MASTER'");
 					int masterCount = 0;
 					while (rs.next()){
 						masterCount = rs.getInt(1);
@@ -1266,7 +1514,8 @@ public class GoldBank extends JavaPlugin implements Listener {
 						master = true;
 					// check if a sign is registered at the same location
 					if (count != 0){
-						rs = st.executeQuery("SELECT COUNT(*) FROM chestdata WHERE world = '" + blockWorld + "' AND x = '" + blockX + "' AND y = '" + blockY + "' AND z = '" + blockZ + "' AND username = '" + p + "'");
+						UUID pUUID = getSafeUUID(p);
+						rs = st.executeQuery("SELECT COUNT(*) FROM banks WHERE world = '" + blockWorld + "' AND x = '" + blockX + "' AND y = '" + blockY + "' AND z = '" + blockZ + "' AND uuid = '" + pUUID + "'");
 						int newcount = 0;
 						while (rs.next()){
 							newcount = rs.getInt(1);
@@ -1275,10 +1524,12 @@ public class GoldBank extends JavaPlugin implements Listener {
 						if (player.hasPermission("goldbank.sign.bank.unclaim")){
 							// check if player owns sign at location or if they have proper permissions to unclaim the signs of others
 							if (newcount != 0 || player.hasPermission("goldbank.sign.bank.unclaim.others")){
-								rs = st.executeQuery("SELECT * FROM chestdata WHERE world = '" + blockWorld + "' AND x = '" + blockX + "' AND y = '" + blockY + "' AND z = '" + blockZ + "'");
-								String dp = rs.getString("username");
+								rs = st.executeQuery("SELECT * FROM banks WHERE world = '" + blockWorld + "' AND x = '" + blockX + "' AND y = '" + blockY + "' AND z = '" + blockZ + "'");
+								UUID dpUUID;
 								if (master)
-									dp = p;
+									dpUUID = pUUID;
+								else
+									dpUUID = UUID.fromString(rs.getString("uuid"));
 								Location signLoc = new Location(e.getClickedBlock().getWorld(), blockX, blockY, blockZ);
 								if (signLoc.getBlock().getType() == Material.WALL_SIGN || signLoc.getBlock().getType() == Material.SIGN_POST){
 									Sign sign = (Sign)signLoc.getBlock().getState();
@@ -1290,14 +1541,14 @@ public class GoldBank extends JavaPlugin implements Listener {
 									// check if sign is master or if player owns sign at location
 									if (!master || newcount != 0){
 										e.setCancelled(true);
-										st.executeUpdate("DELETE FROM chestdata WHERE username = '" + dp + "'");
-										File file = new File(this.getDataFolder() + File.separator + "inventories" + File.separator + dp + ".inv");
+										st.executeUpdate("DELETE FROM banks WHERE uuid = '" + dpUUID + "'");
+										File file = new File(this.getDataFolder() + File.separator + "inventories" + File.separator + dpUUID + ".dat");
 										World world = player.getWorld();
 										YamlConfiguration invY = new YamlConfiguration();
 										invY.load(file);
 										Set<String> keys = invY.getKeys(false);
 										for (String invN : keys){
-											if (!invN.equalsIgnoreCase("size")){
+											if (isInt(invN)){
 												world.dropItem(player.getLocation(), invY.getItemStack(invN));
 											}
 										}
@@ -1305,14 +1556,14 @@ public class GoldBank extends JavaPlugin implements Listener {
 										player.sendMessage(ChatColor.DARK_PURPLE + "Bank Sign unclaimed!");
 									}
 									else if (player.hasPermission("goldbank.sign.bank.destroy.master")){
-										rs = st.executeQuery("SELECT * FROM chestdata WHERE world = '" + blockWorld + "' AND x = '" + blockX + "' AND y = '" + blockY + "' AND z = '" + blockZ + "'");
+										rs = st.executeQuery("SELECT * FROM banks WHERE world = '" + blockWorld + "' AND x = '" + blockX + "' AND y = '" + blockY + "' AND z = '" + blockZ + "'");
 										while (rs.next()){
-											String owner = rs.getString("username");
-											File file = new File(this.getDataFolder() + File.separator + "inventories" + File.separator + owner + ".inv");
+											String owner = rs.getString("uuid");
+											File file = new File(this.getDataFolder() + File.separator + "inventories" + File.separator + owner + ".dat");
 											file.delete();
 										}
-										st.executeUpdate("DELETE FROM chestdata WHERE world = '" + blockWorld + "' AND x = '" + blockX + "' AND y = '" + blockY + "' AND z = '" + blockZ + "'");
-										player.sendMessage(ChatColor.DARK_PURPLE + "Master sign destroyed!");
+										st.executeUpdate("DELETE FROM banks WHERE world = '" + blockWorld + "' AND x = '" + blockX + "' AND y = '" + blockY + "' AND z = '" + blockZ + "'");
+										player.sendMessage(ChatColor.DARK_PURPLE + "Master sign unregistered!");
 									}
 								}
 							}
@@ -1324,7 +1575,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 							}
 						}
 						else {
-							player.sendMessage(ChatColor.RED + "Oh noes! You don't have permission to unclaim this!");
+							player.sendMessage(ChatColor.RED + "You don't have permission to unclaim this!");
 						}
 					}
 				}
@@ -1342,53 +1593,56 @@ public class GoldBank extends JavaPlugin implements Listener {
 					}
 				}
 			}
-			if (e.getClickedBlock().getType() == Material.CHEST){
-				String blockWorld = e.getClickedBlock().getWorld().getName();
-				int blockX = e.getClickedBlock().getX();
-				int blockY = e.getClickedBlock().getY();
-				int blockZ = e.getClickedBlock().getZ();
-				Player player = e.getPlayer();
-				String p = player.getName();
-				Connection conn = null;
-				Statement st = null;
-				ResultSet rs = null;
-				try {
-					Class.forName("org.sqlite.JDBC");
-					String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "chestdata.db";
-					conn = DriverManager.getConnection(dbPath);
-					st = conn.createStatement();
-					rs = st.executeQuery("SELECT COUNT(*) FROM shops WHERE world = '" + blockWorld + "' AND x = '" + blockX + "' AND y = '" + (blockY + 1) + "' AND z = '" + blockZ + "' AND admin = 'false'");
-					int count = 0;
+		}
+		if (e.getClickedBlock().getType() == Material.CHEST){
+			String blockWorld = e.getClickedBlock().getWorld().getName();
+			int blockX = e.getClickedBlock().getX();
+			int blockY = e.getClickedBlock().getY();
+			int blockZ = e.getClickedBlock().getZ();
+			Player player = e.getPlayer();
+			String p = player.getName();
+			Connection conn = null;
+			Statement st = null;
+			ResultSet rs = null;
+			try {
+				Class.forName("org.sqlite.JDBC");
+				String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "data.db";
+				conn = DriverManager.getConnection(dbPath);
+				st = conn.createStatement();
+				rs = st.executeQuery("SELECT COUNT(*) FROM shops WHERE world = '" + blockWorld + "' AND x = '" + blockX + "' AND y = '" + (blockY + 1) + "' AND z = '" + blockZ + "' AND admin = 'false'");
+				int count = 0;
+				while (rs.next()){
+					count = rs.getInt(1);
+				}
+				if (count == 1){
+					rs = st.executeQuery("SELECT COUNT(*) FROM shops WHERE x = '" + blockX + "' AND y = '" + (blockY + 1) + "' AND z = '" + blockZ + "' AND creator = '" + p + "' AND admin = 'false'");
+					int newcount = 0;
 					while (rs.next()){
-						count = rs.getInt(1);
+						newcount = rs.getInt(1);
 					}
-					if (count == 1){
+					if (newcount > 0 || player.hasPermission("goldbank.sign.shop.destroy.*")){
+						if (e.getAction() == Action.LEFT_CLICK_BLOCK){
+							e.setCancelled(true);
+							player.sendMessage(ChatColor.RED + "Please left-click the Shop sign to destroy this shop!");
+						}
+					}
+					else {
 						e.setCancelled(true);
-						rs = st.executeQuery("SELECT COUNT(*) FROM shops WHERE x = '" + blockX + "' AND y = '" + (blockY + 1) + "' AND z = '" + blockZ + "' AND creator = '" + p + "' AND admin = 'false'");
-						int newcount = 0;
-						while (rs.next()){
-							newcount = rs.getInt(1);
-						}
-						if (newcount > 0 || player.hasPermission("goldbank.sign.shop.destroy.*")){
-							player.sendMessage(ChatColor.RED + "Please left-click the Shop sign to destroy your shop!");
-						}
-						else {
-							player.sendMessage(ChatColor.RED + "That chest is part of a player shop!!");
-						}
+						player.sendMessage(ChatColor.RED + "That chest is part of a player shop!");
 					}
 				}
-				catch (Exception f){
-					f.printStackTrace();
+			}
+			catch (Exception f){
+				f.printStackTrace();
+			}
+			finally {
+				try {
+					conn.close();
+					st.close();
+					rs.close();
 				}
-				finally {
-					try {
-						conn.close();
-						st.close();
-						rs.close();
-					}
-					catch (Exception u){
-						u.printStackTrace();
-					}
+				catch (Exception u){
+					u.printStackTrace();
 				}
 			}
 		}
@@ -1405,7 +1659,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 			ResultSet rs = null;
 			try {
 				Class.forName("org.sqlite.JDBC");
-				String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "chestdata.db";
+				String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "data.db";
 				conn = DriverManager.getConnection(dbPath);
 				st = conn.createStatement();
 				rs = st.executeQuery("SELECT * FROM shops WHERE world = '" + b.getBlock().getWorld().getName() + "' AND x = '" + b.getBlock().getX() + "' AND y = '" + b.getBlock().getY() + "' AND z = '" + b.getBlock().getZ() + "'");
@@ -1413,43 +1667,20 @@ public class GoldBank extends JavaPlugin implements Listener {
 				while (rs.next())
 					i = rs.getInt(1);
 				if (i != 0){
-					rs = st.executeQuery("SELECT * FROM shops WHERE world = '" + b.getBlock().getWorld().getName() + "' AND x = '" + b.getBlock().getX() + "' AND y = '" + b.getBlock().getY() + "' AND z = '" + b.getBlock().getZ() + "'");
-					int shopId = rs.getInt("id");
-					String admin = rs.getString("admin");
-					rs = st.executeQuery("SELECT COUNT(*) FROM shops WHERE world = '" + b.getBlock().getWorld().getName() + "' AND x = '" + b.getBlock().getX() + "' AND y = '" + b.getBlock().getY() + "' AND z = '" + b.getBlock().getZ() + "' AND creator = '" + b.getPlayer().getName() + "'");
+					b.setCancelled(true);
+					rs = st.executeQuery("SELECT COUNT(*) FROM shops WHERE world = '" + b.getBlock().getWorld().getName() + "' AND x = '" + b.getBlock().getX() + "' AND y = '" + b.getBlock().getY() + "' AND z = '" + b.getBlock().getZ() + "' AND creator = '" + getSafeUUID(b.getPlayer().getName()) + "'");
 					i = 0;
 					while (rs.next())
 						i = rs.getInt(1);
-					if (i != 0){
-						if (!b.getPlayer().hasPermission("goldbank.sign.shop.destroy")){
-							b.setCancelled(true);
-							b.getPlayer().sendMessage(ChatColor.RED +"Oh noes! You don't have permission to break that block! :(");
-						}
-						else {
-							st.executeUpdate("DELETE FROM shops WHERE world = '" + b.getBlock().getWorld().getName() + "' AND x ='" + b.getBlock().getX() + "' AND y = '" + b.getBlock().getY() + "' AND z = '" + b.getBlock().getZ() + "'");
-							st.executeUpdate("INSERT INTO shoplog (shop, player, action, time) VALUES ('" + shopId + "', '" + b.getPlayer().getName() + "', '3', '" + System.currentTimeMillis() / 1000 + "')");
-							b.getPlayer().sendMessage(ChatColor.DARK_PURPLE + "GoldShop successfully unregistered!");
-							if (admin.equalsIgnoreCase("false")){
-								Location chestLoc = new Location(b.getBlock().getWorld(), b.getBlock().getX(), (b.getBlock().getY() - 1), b.getBlock().getZ());
-								chestLoc.getBlock().setType(Material.AIR);
-							}
-						}
-					}
-					else {
-						if (!b.getPlayer().hasPermission("goldbank.sign.shop.destroy.*")){
-							b.setCancelled(true);
-							b.getPlayer().sendMessage(ChatColor.RED +"Oh noes! You don't have permission to break that block! :(");
-						}
-						else {
-							st.executeUpdate("DELETE FROM shops WHERE world = '" + b.getBlock().getWorld().getName() + "' AND x ='" + b.getBlock().getX() + "' AND y = '" + b.getBlock().getY() + "' AND z = '" + b.getBlock().getZ() + "'");
-							st.executeUpdate("INSERT INTO shoplog (shop, player, action, time) VALUES ('" + shopId + "', '" + b.getPlayer().getName() + "', '3', '" + System.currentTimeMillis() / 1000 + "')");
-							b.getPlayer().sendMessage(ChatColor.DARK_PURPLE + "GoldShop successfully unregistered!");
-							if (admin.equalsIgnoreCase("false")){
-								Location chestLoc = new Location(b.getBlock().getWorld(), b.getBlock().getX(), (b.getBlock().getY() - 1), b.getBlock().getZ());
-								chestLoc.getBlock().setType(Material.AIR);
-							}
-						}
-					}
+					if (i != 0)
+						if (!b.getPlayer().hasPermission("goldbank.sign.shop.destroy"))
+							b.getPlayer().sendMessage(ChatColor.RED +"You don't have permission to break that block!");
+						else
+							b.getPlayer().sendMessage(ChatColor.RED + "Please left-click the GoldShop on this block to unregister it.");
+					else if (!b.getPlayer().hasPermission("goldbank.sign.shop.destroy.*"))
+						b.getPlayer().sendMessage(ChatColor.RED + "Please left-click the GoldShop on this block to unregister it.");
+					else
+						b.getPlayer().sendMessage(ChatColor.RED +"You don't have permission to break that block!");
 				}
 			}
 			catch (Exception e){
@@ -1472,14 +1703,13 @@ public class GoldBank extends JavaPlugin implements Listener {
 				rs = null;
 				try {
 					Class.forName("org.sqlite.JDBC");
-					String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "chestdata.db";
+					String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "data.db";
 					conn = DriverManager.getConnection(dbPath);
 					st = conn.createStatement();
-					rs = st.executeQuery("SELECT * FROM chestdata WHERE world = '" + b.getBlock().getWorld().getName() + "' AND x = '" + b.getBlock().getX() + "' AND y = '" + b.getBlock().getY() + "' AND z = '" + b.getBlock().getZ() + "' AND username = 'MASTER'");
+					rs = st.executeQuery("SELECT * FROM banks WHERE world = '" + b.getBlock().getWorld().getName() + "' AND x = '" + b.getBlock().getX() + "' AND y = '" + b.getBlock().getY() + "' AND z = '" + b.getBlock().getZ() + "' AND uuid = 'MASTER'");
 					int masterCount = 0;
-					while (rs.next()){
+					while (rs.next())
 						masterCount = rs.getInt(1);
-					}
 					if (masterCount != 0)
 						master = true;
 				}
@@ -1488,9 +1718,9 @@ public class GoldBank extends JavaPlugin implements Listener {
 				}
 				finally {
 					try {
-						conn.close();
-						st.close();
 						rs.close();
+						st.close();
+						conn.close();
 					}
 					catch (Exception e){
 						e.printStackTrace();
@@ -1511,13 +1741,13 @@ public class GoldBank extends JavaPlugin implements Listener {
 				}
 			}
 		}
-		if (MiscUtils.getAdjacentBlock(b.getBlock(), Material.WALL_SIGN) != null || MiscUtils.getAdjacentBlock(b.getBlock(), Material.SIGN_POST) != null){
+		if (getAdjacentBlock(b.getBlock(), Material.WALL_SIGN) != null || getAdjacentBlock(b.getBlock(), Material.SIGN_POST) != null){
 			Block adjBlock = null;
-			if (MiscUtils.getAdjacentBlock(b.getBlock(), Material.WALL_SIGN) != null){
-				adjBlock = MiscUtils.getAdjacentBlock(b.getBlock(), Material.WALL_SIGN);
+			if (getAdjacentBlock(b.getBlock(), Material.WALL_SIGN) != null){
+				adjBlock = getAdjacentBlock(b.getBlock(), Material.WALL_SIGN);
 			}
-			else if (MiscUtils.getAdjacentBlock(b.getBlock(), Material.SIGN_POST)!= null){
-				adjBlock = MiscUtils.getAdjacentBlock(b.getBlock(), Material.SIGN_POST);
+			else if (getAdjacentBlock(b.getBlock(), Material.SIGN_POST)!= null){
+				adjBlock = getAdjacentBlock(b.getBlock(), Material.SIGN_POST);
 			}
 			Sign sign = (Sign)adjBlock.getState();
 			Connection conn = null;
@@ -1525,51 +1755,33 @@ public class GoldBank extends JavaPlugin implements Listener {
 			ResultSet rs = null;
 			try {
 				Class.forName("org.sqlite.JDBC");
-				String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "chestdata.db";
+				String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "data.db";
 				conn = DriverManager.getConnection(dbPath);
 				st = conn.createStatement();
 				rs = st.executeQuery("SELECT * FROM shops WHERE world = '" + adjBlock.getWorld().getName() + "' AND x = '" + adjBlock.getX() + "' AND y = '" + adjBlock.getY() + "' AND z = '" + adjBlock.getZ() + "'");
-				String admin = "false";
-				try {admin = rs.getString("admin");}
-				catch (Exception e){}
 				int i = 0;
 				while (rs.next())
 					i = rs.getInt(1);
 				if (i != 0){
-					rs = st.executeQuery("SELECT * FROM shops WHERE world = '" + adjBlock.getWorld().getName() + "' AND x = '" + adjBlock.getX() + "' AND y = '" + adjBlock.getY() + "' AND z = '" + adjBlock.getZ() + "'");
-					int shopId = rs.getInt("id");
+					b.setCancelled(true);
 					rs = st.executeQuery("SELECT COUNT(*) FROM shops WHERE world = '" + adjBlock.getWorld().getName() + "' AND x = '" + adjBlock.getX() + "' AND y = '" + adjBlock.getY() + "' AND z = '" + adjBlock.getZ() + "' AND creator = '" + b.getPlayer().getName() + "'");
 					i = 0;
 					while (rs.next())
 						i = rs.getInt(1);
 					if (i != 0 || b.getPlayer().hasPermission("goldbank.sign.shop.destroy.*")){
 						if (!b.getPlayer().hasPermission("goldbank.sign.shop.destroy")){
-							b.setCancelled(true);
-							b.getPlayer().sendMessage(ChatColor.RED +"Oh noes! You don't have permission to break that block! :(");
+							b.getPlayer().sendMessage(ChatColor.RED +"You don't have permission to break that block!");
 						}
 						else {
-							st.executeUpdate("DELETE FROM shops WHERE world = '" + adjBlock.getWorld().getName() + "' AND x ='" + adjBlock.getX() + "' AND y = '" + adjBlock.getY() + "' AND z = '" + adjBlock.getZ() + "'");
-							st.executeUpdate("INSERT INTO shoplog (shop, player, action, time) VALUES ('" + shopId + "', '" + b.getPlayer().getName() + "', '3', '" + System.currentTimeMillis() / 1000 + "')");
-							b.getPlayer().sendMessage(ChatColor.DARK_PURPLE + "GoldShop successfully unregistered!");
-							if (admin.equalsIgnoreCase("false")){
-								Location chestLoc = new Location(adjBlock.getWorld(), adjBlock.getX(), (adjBlock.getY() - 1), adjBlock.getZ());
-								chestLoc.getBlock().setType(Material.AIR);
-							}
+							b.getPlayer().sendMessage(ChatColor.RED + "Please left-click the GoldShop on this block to unregister it.");
 						}
 					}
 					else {
 						if (!b.getPlayer().hasPermission("goldbank.sign.shop.destroy.*")){
-							b.setCancelled(true);
-							b.getPlayer().sendMessage(ChatColor.RED +"Oh noes! You don't have permission to break that block! :(");
+							b.getPlayer().sendMessage(ChatColor.RED +"You don't have permission to break that block!");
 						}
 						else {
-							st.executeUpdate("DELETE FROM shops WHERE world = '" + adjBlock.getWorld().getName() + "' AND x ='" + adjBlock.getX() + "' AND y = '" + adjBlock.getY() + "' AND z = '" + adjBlock.getZ() + "'");
-							st.executeUpdate("INSERT INTO shoplog (shop, player, action, time) VALUES ('" + shopId + "', '" + b.getPlayer().getName() + "', '3', '" + System.currentTimeMillis() / 1000 + "')");
-							b.getPlayer().sendMessage(ChatColor.DARK_PURPLE + "GoldShop successfully unregistered!");
-							if (admin.equalsIgnoreCase("false")){
-								Location chestLoc = new Location(b.getBlock().getWorld(), b.getBlock().getX(), (b.getBlock().getY() - 1), b.getBlock().getZ());
-								chestLoc.getBlock().setType(Material.AIR);
-							}
+							b.getPlayer().sendMessage(ChatColor.RED + "Please left-click the GoldShop on this block to unregister it.");
 						}
 					}
 				}
@@ -1588,47 +1800,46 @@ public class GoldBank extends JavaPlugin implements Listener {
 				}
 			}
 			if (sign.getLine(0).equalsIgnoreCase("§2[GoldBank]")){
+				b.setCancelled(true);
 				if (!b.getPlayer().hasPermission("goldbank.sign.bank.destroy")){
-					b.setCancelled(true);
-					b.getPlayer().sendMessage(ChatColor.RED +"Oh noes! You don't have permission to break that block! :(");
+					b.getPlayer().sendMessage(ChatColor.RED +"You don't have permission to break that block!");
 				}
 				else {
-					try {
+					/*try {
 						Class.forName("org.sqlite.JDBC");
-						String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "chestdata.db";
+						String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "data.db";
 						conn = DriverManager.getConnection(dbPath);
 						st = conn.createStatement();
 						String checkWorld = adjBlock.getWorld().getName();
 						int checkX = adjBlock.getX();
 						int checkY = adjBlock.getY();
 						int checkZ = adjBlock.getZ();
-						rs = st.executeQuery("SELECT COUNT(*) FROM chestdata WHERE world = '" + checkWorld + "' AND x = '" + checkX + "' AND y = '" + checkY + "' AND z = '" + checkZ + "'");
+						rs = st.executeQuery("SELECT COUNT(*) FROM banks WHERE world = '" + checkWorld + "' AND x = '" + checkX + "' AND y = '" + checkY + "' AND z = '" + checkZ + "'");
 						int i = 0;
 						while (rs.next()){
 							i = rs.getInt(1);
 						}
 						if (i > 0){
 							int masterCount = 0;
-							rs = st.executeQuery("SELECT COUNT(*) FROM chestdata WHERE world = '" + checkWorld + "' AND x = '" + checkX + "' AND y = '" + checkY + "' AND z = '" + checkZ + "' AND username = 'MASTER'");
+							rs = st.executeQuery("SELECT COUNT(*) FROM banks WHERE world = '" + checkWorld + "' AND x = '" + checkX + "' AND y = '" + checkY + "' AND z = '" + checkZ + "' AND uuid = 'MASTER'");
 							while (rs.next()){
 								masterCount = rs.getInt(1);
 							}
 							boolean master = false;
 							if (masterCount != 0){
 								master = true;
-								rs = st.executeQuery("SELECT * FROM chestdata WHERE world = '" + checkWorld + "' AND x = '" + checkX + "' AND y = '" + checkY + "' AND z = '" + checkZ + "'");
-								while (rs.next()){
-									String owner = rs.getString("username");
-									File file = new File(this.getDataFolder() + File.separator + "inventories" + File.separator + owner + ".inv");
+								rs = st.executeQuery("SELECT * FROM banks WHERE world = '" + checkWorld + "' AND x = '" + checkX + "' AND y = '" + checkY + "' AND z = '" + checkZ + "'");
+								while (rs.next()){;
+									File file = new File(this.getDataFolder() + File.separator + "inventories" + File.separator + rs.getString("uuid") + ".dat");
 									file.delete();
 								}
 								b.getPlayer().sendMessage(ChatColor.DARK_PURPLE + "Master Sign Unregistered!");
 							}
 							else {
-								b.getPlayer().sendMessage(ChatColor.DARK_PURPLE + "GoldBank sign unregistered!");
+								b.getPlayer().sendMessage(ChatColor.DARK_PURPLE + "GoldBank unregistered!");
 							}
 							if (!master || b.getPlayer().hasPermission("goldbank.sign.bank.destroy.master")){
-								st.executeUpdate("DELETE FROM chestdata WHERE world = '" + checkWorld + "' AND x ='" + checkX + "' AND y = '" + checkY + "' AND z = '" + checkZ + "'");
+								st.executeUpdate("DELETE FROM banks WHERE world = '" + checkWorld + "' AND x ='" + checkX + "' AND y = '" + checkY + "' AND z = '" + checkZ + "'");
 							}
 						}
 					}
@@ -1644,30 +1855,34 @@ public class GoldBank extends JavaPlugin implements Listener {
 						catch (Exception u){
 							u.printStackTrace();
 						}
-					}
+					}*/
+					b.getPlayer().sendMessage(ChatColor.RED + "Please left-click the GoldBank on this block to unregister it.");
 				}
 			}
 			else if (sign.getLine(0).equalsIgnoreCase("§2[GoldATM]")){
+				b.setCancelled(true);
 				if (!b.getPlayer().hasPermission("goldbank.sign.atm.destroy")){
-					b.setCancelled(true);
-					b.getPlayer().sendMessage(ChatColor.RED + "Oh noes! You don't have permission to break that block! :(");
+					b.getPlayer().sendMessage(ChatColor.RED + "You don't have permission to break that block!");
 				}
 			}
 		}
-		else if (MiscUtils.getAdjacentBlock(b.getBlock(), Material.SIGN_POST) != null){
-			Block adjblock = MiscUtils.getAdjacentBlock(b.getBlock(), Material.SIGN_POST);
+		else if (getAdjacentBlock(b.getBlock(), Material.SIGN_POST) != null){
+			Block adjblock = getAdjacentBlock(b.getBlock(), Material.SIGN_POST);
 			Sign sign = (Sign)adjblock.getState();
 			if (sign.getLine(0).equalsIgnoreCase("§2[GoldBank]")){
+				b.setCancelled(true);
 				if (!b.getPlayer().hasPermission("goldbank.sign.bank.destroy")){
-					b.setCancelled(true);
-					b.getPlayer().sendMessage(ChatColor.RED + "Oh noes! You don't have permission to break that block! :(");
+					b.getPlayer().sendMessage(ChatColor.RED + "You don't have permission to break that block!");
 				}
+				else
+					b.getPlayer().sendMessage(ChatColor.RED + "Please left-click the GoldBank on this block to unregister it.");
 			}
 			else if (sign.getLine(0).equalsIgnoreCase("§2[GoldATM]")){
 				if (!b.getPlayer().hasPermission("goldbank.sign.atm.destroy")){
-					b.setCancelled(true);
-					b.getPlayer().sendMessage(ChatColor.RED + "Oh noes! You don't have permission to break that block! :(");
+					b.getPlayer().sendMessage(ChatColor.RED + "You don't have permission to break that block!");
 				}
+				else
+					b.getPlayer().sendMessage(ChatColor.RED + "Please left-click the GoldATM on this block to unregister it.");
 			}
 		}
 		if (b.getBlock().getType() == Material.CHEST){
@@ -1682,7 +1897,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 			ResultSet rs = null;
 			try {
 				Class.forName("org.sqlite.JDBC");
-				String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "chestdata.db";
+				String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "data.db";
 				conn = DriverManager.getConnection(dbPath);
 				st = conn.createStatement();
 				rs = st.executeQuery("SELECT COUNT(*) FROM shops WHERE world = '" + blockWorld + "' AND x = '" + blockX + "' AND y = '" + (blockY + 1) + "' AND z = '" + blockZ + "' AND admin = 'false'");
@@ -1729,7 +1944,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 		ResultSet rs = null;
 		try {
 			Class.forName("org.sqlite.JDBC");
-			String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "chestdata.db";
+			String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "data.db";
 			conn = DriverManager.getConnection(dbPath);
 			st = conn.createStatement();
 			rs = st.executeQuery("SELECT * FROM shops WHERE world = '" + c.getBlock().getWorld().getName() + "' AND x = '" + c.getBlock().getX() + "' AND y = '" + (c.getBlock().getY() + 1) + "' AND z = '" + c.getBlock().getZ() + "' AND admin = 'false'");
@@ -1739,7 +1954,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 			}
 			if (i > 0){
 				ResultSet res = st.executeQuery("SELECT * FROM shops WHERE world = '" + c.getBlock().getWorld().getName() + "' AND x = '" + c.getBlock().getX() + "' AND y = '" + (c.getBlock().getY() + 1) + "' AND z = '" + c.getBlock().getZ() + "' AND admin = 'false'");
-				String creator = res.getString("creator");
+				String creator = getSafePlayerName(UUID.fromString(res.getString("creator")));
 				if (!creator.equalsIgnoreCase(c.getPlayer().getName())){
 					c.setCancelled(true);
 					c.getPlayer().sendMessage(ChatColor.RED + "This spot is owned by " + creator + "!");
@@ -1779,7 +1994,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 				ResultSet rs = null;
 				try {
 					Class.forName("org.sqlite.JDBC");
-					String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "chestdata.db";
+					String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "data.db";
 					conn = DriverManager.getConnection(dbPath);
 					st = conn.createStatement();
 					rs = st.executeQuery("SELECT COUNT(*) FROM shops WHERE world = '" + chestWorld + "' AND x = '" + chestX + "' AND y = '" + (chestY + 1) + "' AND z = '" + chestZ + "'");
@@ -1788,7 +2003,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 						count = rs.getInt(1);
 					}
 					if (count == 1){
-						rs = st.executeQuery("SELECT COUNT(*) FROM shops WHERE world = '" + chestWorld + "' AND x = '" + chestX + "' AND y = '" + (chestY + 1) + "' AND z = '" + chestZ + "' AND creator = '" + p + "'");
+						rs = st.executeQuery("SELECT COUNT(*) FROM shops WHERE world = '" + chestWorld + "' AND x = '" + chestX + "' AND y = '" + (chestY + 1) + "' AND z = '" + chestZ + "' AND creator = '" + getSafeUUID(p) + "'");
 						int seccount = 0;
 						while (rs.next()){
 							seccount = rs.getInt(1);
@@ -1841,12 +2056,12 @@ public class GoldBank extends JavaPlugin implements Listener {
 					rline = matInfo[0];
 				}
 				boolean isValidInt = false;
-				if (MiscUtils.isInt(rline)){
-					if (MiscUtils.isMat(Integer.parseInt(rline))){
+				if (isInt(rline)){
+					if (isMat(Integer.parseInt(rline))){
 						isValidInt = true;
 					}
 				}
-				if (MiscUtils.isMat(rline) || isValidInt){
+				if (isMat(rline) || isValidInt){
 					it.remove();
 				}
 			}
@@ -1866,22 +2081,22 @@ public class GoldBank extends JavaPlugin implements Listener {
 					rline = matInfo[0];
 				}
 				boolean isValidInt = false;
-				if (MiscUtils.isInt(rline)){
-					if (MiscUtils.isMat(Integer.parseInt(rline))){
+				if (isInt(rline)){
+					if (isMat(Integer.parseInt(rline))){
 						isValidInt = true;
 					}
 				}
-				if (MiscUtils.isMat(rline) || isValidInt){
+				if (isMat(rline) || isValidInt){
 					it.remove();
 				}
 			}
-			else if (MiscUtils.getAdjacentBlock(block, Material.WALL_SIGN) != null || MiscUtils.getAdjacentBlock(block, Material.SIGN_POST) != null){
+			else if (getAdjacentBlock(block, Material.WALL_SIGN) != null || getAdjacentBlock(block, Material.SIGN_POST) != null){
 				Block adjBlock = null;
-				if (MiscUtils.getAdjacentBlock(block, Material.WALL_SIGN) != null){
-					adjBlock = MiscUtils.getAdjacentBlock(block, Material.WALL_SIGN);
+				if (getAdjacentBlock(block, Material.WALL_SIGN) != null){
+					adjBlock = getAdjacentBlock(block, Material.WALL_SIGN);
 				}
-				else if (MiscUtils.getAdjacentBlock(block, Material.SIGN_POST) != null){
-					adjBlock = MiscUtils.getAdjacentBlock(block, Material.SIGN_POST);
+				else if (getAdjacentBlock(block, Material.SIGN_POST) != null){
+					adjBlock = getAdjacentBlock(block, Material.SIGN_POST);
 				}
 				Sign sign = (Sign)adjBlock.getState();
 				if (sign.getLine(0).equalsIgnoreCase("§2[GoldBank]")){
@@ -1902,12 +2117,12 @@ public class GoldBank extends JavaPlugin implements Listener {
 						rline = matInfo[0];
 					}
 					boolean isValidInt = false;
-					if (MiscUtils.isInt(rline)){
-						if (MiscUtils.isMat(Integer.parseInt(rline))){
+					if (isInt(rline)){
+						if (isMat(Integer.parseInt(rline))){
 							isValidInt = true;
 						}
 					}
-					if (MiscUtils.isMat(rline) || isValidInt){
+					if (isMat(rline) || isValidInt){
 						it.remove();
 					}
 				}
@@ -1923,7 +2138,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 		String line = p.getLine(0);
 		String rline = line;
 		char[] lineChar = rline.toCharArray();
-		if (MiscUtils.charKeyExists(lineChar, 0)){
+		if (charKeyExists(lineChar, 0)){
 			if (Character.toString(lineChar[0]).equals("[") && Character.toString(lineChar[lineChar.length - 1]).equals("]")){
 				rline = rline.replace("[", "");
 				rline = rline.replace("]", "");
@@ -1942,17 +2157,17 @@ public class GoldBank extends JavaPlugin implements Listener {
 			ResultSet rs = null;
 			try {
 				Class.forName("org.sqlite.JDBC");
-				String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "chestdata.db";
+				String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "data.db";
 				conn = DriverManager.getConnection(dbPath);
 				st = conn.createStatement();
-				rs = st.executeQuery("SELECT * FROM chestdata WHERE world = '" + p.getBlock().getWorld().getName() + "' AND x = '" + p.getBlock().getX() + "' AND y = '" + p.getBlock().getY() + "' AND z = '" + p.getBlock().getZ() + "'");
+				rs = st.executeQuery("SELECT * FROM banks WHERE world = '" + p.getBlock().getWorld().getName() + "' AND x = '" + p.getBlock().getX() + "' AND y = '" + p.getBlock().getY() + "' AND z = '" + p.getBlock().getZ() + "'");
 				int i = 0;
 				while (rs.next()){
 					i = i + 1;
 				}
 				if (i != 0){
 					p.getPlayer().sendMessage(ChatColor.RED + "Error: One or more signs were found registered at this location. Attempting to overwrite...");
-					st.executeUpdate("DELETE FROM chestdata WHERE world = '" + p.getBlock().getWorld().getName() + "' AND x = '" + p.getBlock().getX() + "' AND y = '" + p.getBlock().getY() + "' AND z = '" + p.getBlock().getZ() + "'");
+					st.executeUpdate("DELETE FROM banks WHERE world = '" + p.getBlock().getWorld().getName() + "' AND x = '" + p.getBlock().getX() + "' AND y = '" + p.getBlock().getY() + "' AND z = '" + p.getBlock().getZ() + "'");
 				}
 			}
 			catch (Exception ex){
@@ -1980,7 +2195,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 				}
 				int tier = 1;
 				if (p.getLine(1).length() >= 5){
-					if (p.getLine(1).substring(0, 4).equalsIgnoreCase("Tier") && MiscUtils.isInt(p.getLine(1).substring(5, 6))){
+					if (p.getLine(1).substring(0, 4).equalsIgnoreCase("Tier") && isInt(p.getLine(1).substring(5, 6))){
 						if (getConfig().isSet("tiers." + p.getLine(1).substring(0, 4) + ".size") && getConfig().isSet("tiers." + p.getLine(1).substring(0, 4) + ".fee")){
 							tier = Integer.parseInt(p.getLine(1).substring(5, 6));
 							p.setLine(1, "§4Tier " + p.getLine(1).substring(5, 6));
@@ -1994,7 +2209,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 					}
 				}
 				else if (p.getLine(1).length() >= 1){
-					if (MiscUtils.isInt(p.getLine(1).substring(0, 1))){
+					if (isInt(p.getLine(1).substring(0, 1))){
 						if (getConfig().isSet("tiers." + Integer.parseInt(p.getLine(1).substring(0, 1)) + ".size")){
 							if (getConfig().isSet("tiers." + Integer.parseInt(p.getLine(1).substring(0, 1)) + ".fee")){
 								tier = Integer.parseInt(p.getLine(1).substring(0, 1));
@@ -2017,10 +2232,10 @@ public class GoldBank extends JavaPlugin implements Listener {
 					st = null;
 					try {
 						Class.forName("org.sqlite.JDBC");
-						String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "chestdata.db";
+						String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "data.db";
 						conn = DriverManager.getConnection(dbPath);
 						st = conn.createStatement();
-						st.executeUpdate("INSERT INTO chestdata (username, world, x, y, z, sign, tier) VALUES ('MASTER', '" + p.getBlock().getWorld().getName() + "', '" + p.getBlock().getX() + "', '" + p.getBlock().getY() + "', '" + p.getBlock().getZ() + "', 'true', '" + Integer.toString(tier) + "')");
+						st.executeUpdate("INSERT INTO banks (uuid, world, x, y, z, sign, tier) VALUES ('MASTER', '" + p.getBlock().getWorld().getName() + "', '" + p.getBlock().getX() + "', '" + p.getBlock().getY() + "', '" + p.getBlock().getZ() + "', 'true', '" + Integer.toString(tier) + "')");
 					}
 					catch (Exception e){
 						e.printStackTrace();
@@ -2062,21 +2277,21 @@ public class GoldBank extends JavaPlugin implements Listener {
 		}
 		rline = rline.replace(" ", "_");
 		boolean isValidInt = false;
-		if (MiscUtils.isInt(rline)){
-			if (MiscUtils.isMat(Integer.parseInt(rline))){
+		if (isInt(rline)){
+			if (isMat(Integer.parseInt(rline))){
 				isValidInt = true;
 			}
 		}
 		boolean pHead = false;
 		if (rline.equalsIgnoreCase("PlayerHead"))
 			pHead = true;
-		if (MiscUtils.isMat(rline) || isValidInt || pHead){
+		if (isMat(rline) || isValidInt || pHead){
 			String mat = "";
 			if (isValidInt){
 				//TODO: Magic numbers again. :P
 				mat = WordUtils.capitalize(Material.getMaterial(Integer.parseInt(rline)).toString().toLowerCase());
 			}
-			else if (MiscUtils.isMat(rline)){
+			else if (isMat(rline)){
 				mat = WordUtils.capitalize(rline.toLowerCase());
 			}
 			else if (pHead){
@@ -2110,7 +2325,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 							buys[1] = buys[1].replace("n", "");
 							buyUnit = "n";
 						}
-						if (MiscUtils.isInt(buys[0]) && MiscUtils.isInt(buys[1])){
+						if (isInt(buys[0]) && isInt(buys[1])){
 							if (Integer.parseInt(buys[0]) > 0 && Integer.parseInt(buys[1]) > 0)
 								validBuy = true;
 						}
@@ -2132,7 +2347,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 							sells[1] = sells[1].replace("n", "");
 							sellUnit = "n";
 						}
-						if (MiscUtils.isInt(sells[0]) && MiscUtils.isInt(sells[1])){
+						if (isInt(sells[0]) && isInt(sells[1])){
 							if (Integer.parseInt(sells[0]) > 0 && Integer.parseInt(sells[1]) > 0)
 								validSell = true;
 						}
@@ -2142,7 +2357,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 					if (validBuy && validSell){
 						int dataNum = 0;
 						if (data != null){
-							if (MiscUtils.isInt(data)){
+							if (isInt(data)){
 								dataNum = Integer.parseInt(data);
 								if (mat.equalsIgnoreCase("Wool")){
 									if (dataNum == 0)
@@ -2191,7 +2406,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 						ResultSet rs = null;
 						try {
 							Class.forName("org.sqlite.JDBC");
-							String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "chestdata.db";
+							String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "data.db";
 							conn = DriverManager.getConnection(dbPath);
 							st = conn.createStatement();
 							boolean admin = true;
@@ -2212,12 +2427,12 @@ public class GoldBank extends JavaPlugin implements Listener {
 										int matId = 0;
 										if (isValidInt)
 											matId = Integer.parseInt(rline);
-										else if (MiscUtils.isMat(rline))
+										else if (isMat(rline))
 											matId = Material.getMaterial(rline).getId();
 										else
 											matId = -2;
 										st.executeUpdate("INSERT INTO shops (creator, world, x, y, z, material, data, buyamount, buyprice, sellamount, sellprice, admin, buyunit, sellunit) VALUES (" +
-												"'" + player.getName() +
+												"'" + getSafeUUID(player) +
 												"', '" + player.getWorld().getName() +
 												"', '" + x +
 												"', '" + y +
@@ -2233,7 +2448,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 												"', '" + sellUnit + "')");
 										rs = st.executeQuery("SELECT * FROM shops WHERE world = '" + player.getWorld().getName() + "' AND x = '" + x + "' AND y = '" + y + "' AND z = '" + z + "'");
 										int shopId = rs.getInt("id");
-										st.executeUpdate("INSERT INTO shoplog (shop, player, action, time) VALUES ('" + shopId + "', '" + player.getName() + "', '2', '" + System.currentTimeMillis() / 1000 + "')");
+										st.executeUpdate("INSERT INTO shoplog (shop, player, action, time) VALUES ('" + shopId + "', '" + getSafeUUID(player) + "', '2', '" + System.currentTimeMillis() / 1000 + "')");
 										int dataLength = 0;
 										if (dataNum != 0 && Material.getMaterial(matId) != Material.WOOL){
 											dataLength = Integer.toString(dataNum).length() + 1;
@@ -2329,10 +2544,10 @@ public class GoldBank extends JavaPlugin implements Listener {
 		String check = "";
 		if (!invalidday){
 			check = getConfig().getString("dayofweek");
-			int daynum = MiscUtils.checkDay(check);
+			int daynum = checkDay(check);
 			if (dow == daynum){
 				File file = new File(getDataFolder(), "filled.txt");
-				String last = MiscUtils.readFile(getDataFolder() + File.separator + "filled.txt");
+				String last = readFile(getDataFolder() + File.separator + "filled.txt");
 				String fill;
 				fill = last.replaceAll("(\\r|\\n)", "");
 				int filled = Integer.parseInt(fill);
@@ -2346,7 +2561,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 			}
 			if (dow == daynum + 2){
 				File file = new File(getDataFolder(), "filled.txt");
-				String last = MiscUtils.readFile(getDataFolder() + File.separator + "filled.txt");
+				String last = readFile(getDataFolder() + File.separator + "filled.txt");
 				String fill;
 				fill = last.replaceAll("(\\r|\\n)", "");
 				int filled = Integer.parseInt(fill);
@@ -2380,7 +2595,8 @@ public class GoldBank extends JavaPlugin implements Listener {
 						if (sender instanceof Player){
 							if (args.length == 2 && sender.hasPermission("goldbank.view")){
 								String user = sender.getName();
-								File invF = new File(getDataFolder() + File.separator + "inventories", user + ".inv");
+								UUID userUUID = getSafeUUID(user);
+								File invF = new File(getDataFolder() + File.separator + "inventories", userUUID + ".dat");
 								if(invF.exists()){
 									YamlConfiguration invY = new YamlConfiguration();
 									try {
@@ -2389,7 +2605,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 										Set<String> keys = invY.getKeys(false);
 										ItemStack[] invI = new ItemStack[size];
 										for (String invN : keys){
-											if (!invN.equalsIgnoreCase("size")){
+											if (isInt(invN)){
 												int i = Integer.parseInt(invN);
 												invI[i] =  invY.getItemStack(invN);
 											}
@@ -2397,8 +2613,8 @@ public class GoldBank extends JavaPlugin implements Listener {
 										Inventory inv = this.getServer().createInventory(null, size, user + "'s GoldBank Sign");
 										inv.setContents(invI);
 										((Player)sender).openInventory(inv);
-										openPlayer[nextIndex] = user;
-										openingPlayer[nextIndex] = user;
+										openPlayer[nextIndex] = userUUID;
+										openingPlayer[nextIndex] = userUUID;
 										openType[nextIndex] = "wallet";
 										nextIndex += 1;
 									}
@@ -2407,11 +2623,12 @@ public class GoldBank extends JavaPlugin implements Listener {
 									}
 								}
 								else
-									sender.sendMessage(ChatColor.RED + "Oh noes! You don't have a Bank inventory!");
+									sender.sendMessage(ChatColor.RED + "You don't have a Bank inventory!");
 							}
 							else if (sender.hasPermission("goldbank.view.others")){
 								String user = args[2];
-								File invF = new File(getDataFolder() + File.separator + "inventories", user + ".inv");
+								UUID userUUID = getSafeUUID(user);
+								File invF = new File(getDataFolder() + File.separator + "inventories", userUUID + ".dat");
 								if(invF.exists()){
 									YamlConfiguration invY = new YamlConfiguration();
 									try {
@@ -2420,7 +2637,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 										Set<String> keys = invY.getKeys(false);
 										ItemStack[] invI = new ItemStack[size];
 										for (String invN : keys){
-											if (!invN.equalsIgnoreCase("size")){
+											if (isInt(invN)){
 												int i = Integer.parseInt(invN);
 												invI[i] =  invY.getItemStack(invN);
 											}
@@ -2428,8 +2645,8 @@ public class GoldBank extends JavaPlugin implements Listener {
 										Inventory inv = this.getServer().createInventory(null, size, user + "'s GoldBank Sign");
 										inv.setContents(invI);
 										((Player)sender).openInventory(inv);
-										openPlayer[nextIndex] = user;
-										openingPlayer[nextIndex] = sender.getName();
+										openPlayer[nextIndex] = userUUID;
+										openingPlayer[nextIndex] = getSafeUUID(sender.getName());
 										openType[nextIndex] = "bank";
 										nextIndex += 1;
 									}
@@ -2438,10 +2655,10 @@ public class GoldBank extends JavaPlugin implements Listener {
 									}
 								}
 								else
-									sender.sendMessage(ChatColor.RED + "Oh noes! This player doesn't have a Bank inventory!");
+									sender.sendMessage(ChatColor.RED + "This player doesn't have a Bank inventory!");
 							}
 							else
-								log.info(ChatColor.RED + "Oh noes! You don't have permission to do this!");
+								log.info(ChatColor.RED + "You don't have permission to do this!");
 						}
 						else
 							sender.sendMessage(ChatColor.RED + "You must be an in-game player to perform this command!");
@@ -2457,8 +2674,8 @@ public class GoldBank extends JavaPlugin implements Listener {
 							if (args[1].equalsIgnoreCase("view")){
 								if (sender.hasPermission("goldbank.wallet.view")){
 									String user = args[2];
-									if (MiscUtils.isInt(args[3])){
-										File invF = new File(getDataFolder() + File.separator + "wallets", user + ".inv");
+									if (isInt(args[3])){
+										File invF = new File(getDataFolder() + File.separator + "wallets", getSafeUUID(user) + ".dat");
 										if(invF.exists()){
 											YamlConfiguration invY = new YamlConfiguration();
 											try {
@@ -2474,8 +2691,8 @@ public class GoldBank extends JavaPlugin implements Listener {
 													Inventory inv = this.getServer().createInventory(null, size, user + "'s Wallet");
 													inv.setContents(invI);
 													((Player)sender).openInventory(inv);
-													openPlayer[nextIndex] = user;
-													openingPlayer[nextIndex] = sender.getName();
+													openPlayer[nextIndex] = getSafeUUID(user);
+													openingPlayer[nextIndex] = getSafeUUID(sender.getName());
 													openType[nextIndex] = "wallet";
 													openWalletNo[nextIndex] = Integer.parseInt(args[2]);
 													nextIndex += 1;
@@ -2488,7 +2705,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 											}
 										}
 										else
-											sender.sendMessage(ChatColor.RED + "Oh noes! This player doesnt have any wallets!");
+											sender.sendMessage(ChatColor.RED + "This player doesnt have any wallets!");
 									}
 									else
 										sender.sendMessage(ChatColor.RED + "Error: Wallet number must be an integer!");
@@ -2497,13 +2714,13 @@ public class GoldBank extends JavaPlugin implements Listener {
 							// spawn
 							else if (args[1].equalsIgnoreCase("spawn")){
 								if (sender.hasPermission("goldbank.wallet.spawn")){
-									if (MiscUtils.isInt(args[3])){
+									if (isInt(args[3])){
 										ItemStack is = new ItemStack(Material.BOOK, 1);
 										ItemMeta meta = is.getItemMeta();
 										meta.setDisplayName("§2Wallet");
 										is.setItemMeta(meta);
 										try {
-											File invF = new File(getDataFolder() + File.separator + "wallets", args[2] + ".inv");
+											File invF = new File(getDataFolder() + File.separator + "wallets", getSafeUUID(args[2]) + ".dat");
 											if (!invF.exists()){
 												invF.createNewFile();
 												sender.sendMessage(ChatColor.DARK_PURPLE + "Specified player does not yet have a wallets file. Attempting to create...");
@@ -2535,7 +2752,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 										sender.sendMessage(ChatColor.RED + "Error: Wallet number must be an integer!");
 								}
 								else
-									sender.sendMessage(ChatColor.RED + "Oh noes! You don't have permission to perform this command! :(");
+									sender.sendMessage(ChatColor.RED + "You don't have permission to perform this command!");
 							}
 							else
 								sender.sendMessage(ChatColor.RED + "Invalid argument! Usage: /gb wallet [command]");
@@ -2557,7 +2774,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 									}
 									else if (args[2].equalsIgnoreCase("page")){
 										if (args.length >= 4){
-											if (MiscUtils.isInt(args[3])){
+											if (isInt(args[3])){
 												if (shopLog.containsKey(sender.getName())){
 													if (shopLog.get(sender.getName()) > 0){
 														int shopId = shopLog.get(sender.getName());
@@ -2566,7 +2783,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 														ResultSet rs = null;
 														try {
 															Class.forName("org.sqlite.JDBC");
-															String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "chestdata.db";
+															String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "data.db";
 															conn = DriverManager.getConnection(dbPath);
 															st = conn.createStatement();
 															shopLog.put(sender.getName(), shopId);
@@ -2617,14 +2834,17 @@ public class GoldBank extends JavaPlugin implements Listener {
 																			while (sec.length() < 2)
 																				sec = "0" + sec;
 																			String dateStr = cal.get(Calendar.YEAR) + "-" + month + "-" + day + " " + hour + ":" + min + ":" + sec;
-																			sender.sendMessage(ChatColor.DARK_PURPLE + Integer.toString(i + ((Integer.parseInt(args[3]) - 1) * perPage)) + ") " + ChatColor.DARK_AQUA + dateStr + " " + ChatColor.LIGHT_PURPLE + rs.getString("player") + " " + actionColor + action + " " + ChatColor.GOLD + rs.getInt("quantity") + " " + Material.getMaterial(rs.getInt("material")).toString() + data);
+																			sender.sendMessage(ChatColor.DARK_PURPLE + Integer.toString(i + ((Integer.parseInt(args[3]) - 1) * perPage)) + ") " + ChatColor.DARK_AQUA +
+																					dateStr + " " + ChatColor.LIGHT_PURPLE + getSafePlayerName(UUID.fromString(rs.getString("player"))) + " " + actionColor + action + " " +
+																					ChatColor.GOLD + rs.getInt("quantity") + " " + Material.getMaterial(rs.getInt("material")).toString() + data);
 																			rs.next();
 																		}
 																		else
 																			break;
 																	}
 																	if (Integer.parseInt(args[3]) < pages)
-																		sender.sendMessage(ChatColor.DARK_PURPLE + "Type " + ChatColor.DARK_GREEN + "/gb shop log page " + (Integer.parseInt(args[3]) + 1) + ChatColor.DARK_PURPLE + " to view the next page");
+																		sender.sendMessage(ChatColor.DARK_PURPLE + "Type " + ChatColor.DARK_GREEN + "/gb shop log page " + (Integer.parseInt(args[3]) + 1) +
+																				ChatColor.DARK_PURPLE + " to view the next page");
 																}
 																else
 																	sender.sendMessage(ChatColor.RED + "Invalid page number!");
@@ -2682,7 +2902,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 					String pName = sender.getName();
 					if (new VaultConnector().hasAccount(pName)){
 						if (new VaultConnector().hasAccount(args[0])){
-							if (MiscUtils.isInt(args[1])){
+							if (isInt(args[1])){
 								int amount = Integer.parseInt(args[1]);
 								if (BankInv.getGoldInBankInv(pName) >= amount + getConfig().getInt("wire-fee")){
 									if (BankInv.removeGoldFromBankInv(pName, amount + getConfig().getInt("wire-fee"))){
@@ -2726,7 +2946,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 		int index = -1;
 		int n = 0;
 		for (n = 0; n < 256; n++){
-			if (c.getPlayer().getName() == openingPlayer[n]){
+			if (getSafeUUID(c.getPlayer().getName()) == openingPlayer[n]){
 				check = true;
 				index = n;
 				break;
@@ -2739,7 +2959,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 					dir = "inventories";
 				else if (openType[index].equals("wallet"))
 					dir = "wallets";
-				File invF = new File(getDataFolder() + File.separator + dir, openPlayer[index] + ".inv");
+				File invF = new File(getDataFolder() + File.separator + dir, openPlayer[index] + ".dat");
 				if (!invF.exists()){
 					invF.createNewFile();
 				}
@@ -2920,22 +3140,22 @@ public class GoldBank extends JavaPlugin implements Listener {
 				rline = matInfo[0];
 			}
 			boolean isValidInt = false;
-			if (MiscUtils.isInt(rline)){
-				if (MiscUtils.isMat(Integer.parseInt(rline))){
+			if (isInt(rline)){
+				if (isMat(Integer.parseInt(rline))){
 					isValidInt = true;
 				}
 			}
-			if (MiscUtils.isMat(rline) || isValidInt){
+			if (isMat(rline) || isValidInt){
 				r.setCancelled(true);
 			}
 		}
-		if (MiscUtils.getAdjacentBlock(block, Material.WALL_SIGN) != null || MiscUtils.getAdjacentBlock(r.getBlock(), Material.SIGN_POST) != null){
+		if (getAdjacentBlock(block, Material.WALL_SIGN) != null || getAdjacentBlock(r.getBlock(), Material.SIGN_POST) != null){
 			Block adjblock = null;
-			if (MiscUtils.getAdjacentBlock(block, Material.WALL_SIGN) != null){
-				adjblock = MiscUtils.getAdjacentBlock(block, Material.WALL_SIGN);
+			if (getAdjacentBlock(block, Material.WALL_SIGN) != null){
+				adjblock = getAdjacentBlock(block, Material.WALL_SIGN);
 			}
-			else if (MiscUtils.getAdjacentBlock(block, Material.SIGN_POST)!= null){
-				adjblock = MiscUtils.getAdjacentBlock(block, Material.SIGN_POST);
+			else if (getAdjacentBlock(block, Material.SIGN_POST)!= null){
+				adjblock = getAdjacentBlock(block, Material.SIGN_POST);
 			}
 			Sign sign = (Sign)adjblock.getState();
 			if (sign.getLine(0).equalsIgnoreCase("§2[GoldBank]")){
@@ -2955,17 +3175,17 @@ public class GoldBank extends JavaPlugin implements Listener {
 				rline = matInfo[0];
 			}
 			boolean isValidInt = false;
-			if (MiscUtils.isInt(rline)){
-				if (MiscUtils.isMat(Integer.parseInt(rline))){
+			if (isInt(rline)){
+				if (isMat(Integer.parseInt(rline))){
 					isValidInt = true;
 				}
 			}
-			if (MiscUtils.isMat(rline) || isValidInt){
+			if (isMat(rline) || isValidInt){
 				r.setCancelled(true);
 			}
 		}
-		else if (MiscUtils.getAdjacentBlock(block, Material.SIGN_POST) != null){
-			Block adjblock = MiscUtils.getAdjacentBlock(block, Material.SIGN_POST);
+		else if (getAdjacentBlock(block, Material.SIGN_POST) != null){
+			Block adjblock = getAdjacentBlock(block, Material.SIGN_POST);
 			Sign sign = (Sign)adjblock.getState();
 			if (sign.getLine(0).equalsIgnoreCase("§2[GoldBank]")){
 				r.setCancelled(true);
@@ -2984,12 +3204,12 @@ public class GoldBank extends JavaPlugin implements Listener {
 				rline = matInfo[0];
 			}
 			boolean isValidInt = false;
-			if (MiscUtils.isInt(rline)){
-				if (MiscUtils.isMat(Integer.parseInt(rline))){
+			if (isInt(rline)){
+				if (isMat(Integer.parseInt(rline))){
 					isValidInt = true;
 				}
 			}
-			if (MiscUtils.isMat(rline) || isValidInt){
+			if (isMat(rline) || isValidInt){
 				r.setCancelled(true);
 			}
 		}
@@ -3011,7 +3231,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 			if (((ShapedRecipe)e.getRecipe()).getResult().equals(is)){
 				if (e.getViewers().get(0).hasPermission("goldbank.wallet.craft")){
 					try {
-						File invF = new File(getDataFolder() + File.separator + "wallets", ((Player)e.getViewers().get(0)).getName() + ".inv");
+						File invF = new File(getDataFolder() + File.separator + "wallets", ((Player)e.getViewers().get(0)).getName() + ".dat");
 						if (!invF.exists()){
 							invF.createNewFile();
 						}
@@ -3043,7 +3263,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 				}
 				else {
 					e.getInventory().setResult(null);
-					((Player)e.getViewers().get(0)).sendMessage(ChatColor.RED + "Oh noes! You don't have permission to craft a wallet!");
+					((Player)e.getViewers().get(0)).sendMessage(ChatColor.RED + "You don't have permission to craft a wallet!");
 				}
 			}
 		}
@@ -3061,7 +3281,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 					e.setCancelled(true);
 				else {
 					try {
-						File invF = new File(getDataFolder() + File.separator + "wallets", ((Player)e.getViewers().get(0)).getName() + ".inv");
+						File invF = new File(getDataFolder() + File.separator + "wallets", ((Player)e.getViewers().get(0)).getName() + ".dat");
 						if (!invF.exists()){
 							invF.createNewFile();
 						}
@@ -3143,7 +3363,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 						int i = 0;
 						try {
 							Class.forName("org.sqlite.JDBC");
-							String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "chestdata.db";
+							String dbPath = "jdbc:sqlite:" + this.getDataFolder() + File.separator + "data.db";
 							conn = DriverManager.getConnection(dbPath);
 							st = conn.createStatement();
 							rs = st.executeQuery("SELECT COUNT(*) FROM shops WHERE world = '" + l.getWorld().getName() + "' AND x = '" + l.getX() + "' AND y = '" + l.getY() + "' AND z = '" + l.getZ() + "'");

@@ -9,6 +9,7 @@ import java.util.List;
 
 import net.amigocraft.GoldBank.GoldBank;
 import net.amigocraft.GoldBank.api.BankInv;
+import net.amigocraft.GoldBank.util.MiscUtils;
 import net.milkbowl.vault.economy.Economy;
 import net.milkbowl.vault.economy.EconomyResponse;
 import net.milkbowl.vault.economy.EconomyResponse.ResponseType;
@@ -111,10 +112,10 @@ public class VaultConnector implements Economy {
 		ResultSet rs = null;
 		try {
 			Class.forName("org.sqlite.JDBC");
-			String dbPath = "jdbc:sqlite:" + plugin.getDataFolder() + File.separator + "chestdata.db";
+			String dbPath = "jdbc:sqlite:" + plugin.getDataFolder() + File.separator + "data.db";
 			conn = DriverManager.getConnection(dbPath);
 			st = conn.createStatement();
-			rs = st.executeQuery("SELECT COUNT(*) FROM chestdata WHERE username = '" + player + "'");
+			rs = st.executeQuery("SELECT COUNT(*) FROM banks WHERE uuid = '" + MiscUtils.getSafeUUID(player) + "'");
 			int i = 0;
 			while (rs.next()){
 				i += 1;

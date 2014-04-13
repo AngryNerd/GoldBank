@@ -1,7 +1,10 @@
 package net.amigocraft.GoldBank.api;
 
+import static net.amigocraft.GoldBank.util.MiscUtils.*;
+
 import java.io.File;
 import java.util.HashMap;
+import java.util.UUID;
 
 import net.amigocraft.GoldBank.GoldBank;
 import net.amigocraft.GoldBank.util.InventoryUtils;
@@ -21,8 +24,8 @@ public class WalletInv {
 	 * @param walletIndex The wallet number to search
 	 * @return The amount of gold (in nuggets) contained by the specified player's given wallet inventory. Note: this method will return 0 if the player's given wallet inventory cannot be loaded.
 	 */
-	public static int getGoldInWalletInv(String p, int walletIndex){
-		File invf = new File(InventoryUtils.plugin.getDataFolder() + File.separator + "wallets", p + ".inv");
+	public static int getGoldInWalletInv(UUID player, int walletIndex){
+		File invf = new File(InventoryUtils.plugin.getDataFolder() + File.separator + "wallets", player + ".dat");
 		if(invf.exists()){
 			YamlConfiguration invY = new YamlConfiguration();
 			try {
@@ -60,14 +63,24 @@ public class WalletInv {
 	}
 
 	/**
+	 * Attempts to get the amount of gold in a specified player's given wallet inventory.
+	 * @param player The player who's wallet's inventory should be searched.
+	 * @param walletIndex The wallet number to search
+	 * @return The amount of gold (in nuggets) contained by the specified player's given wallet inventory. Note: this method will return 0 if the player's given wallet inventory cannot be loaded.
+	 */
+	public static int getGoldInWalletInv(String player, int walletIndex){
+		return getGoldInWalletInv(getSafeUUID(player), walletIndex);
+	}
+
+	/**
 	 * Attempts to add a specific amount of gold (defined in nuggets) to a player's given wallet inventory.
-	 * @param p The player whose wallet inventory should be modified.
+	 * @param player The UUID of the player whose wallet inventory should be modified.
 	 * @param walletIndex The wallet number to be modified.
 	 * @param amount The amount of gold (in nuggets) to be added to the player's given wallet inventory.
 	 * @return Whether or not the gold was successfully added (returns false if not enough space is available or the player's given wallet inventory could not be loaded).
 	 */
-	public static boolean addGoldToWalletInv(String p, int walletIndex, int amount){
-		File invF = new File(InventoryUtils.plugin.getDataFolder() + File.separator + "inventories", p + ".inv");
+	public static boolean addGoldToWalletInv(UUID player, int walletIndex, int amount){
+		File invF = new File(InventoryUtils.plugin.getDataFolder() + File.separator + "inventories", player + ".dat");
 		if(invF.exists()){
 			YamlConfiguration invY = new YamlConfiguration();
 			try {
@@ -129,19 +142,30 @@ public class WalletInv {
 		else
 			return false;
 	}
+	
+	/**
+	 * Attempts to add a specific amount of gold (defined in nuggets) to a player's given wallet inventory.
+	 * @param player The username of the player whose wallet inventory should be modified.
+	 * @param walletIndex The wallet number to be modified.
+	 * @param amount The amount of gold (in nuggets) to be added to the player's given wallet inventory.
+	 * @return Whether or not the gold was successfully added (returns false if not enough space is available or the player's given wallet inventory could not be loaded).
+	 */
+	public static boolean addGoldToWalletInv(String player, int walletIndex, int amount){
+		return addGoldToWalletInv(getSafeUUID(player), walletIndex, amount);
+	}
 
 	/**
 	 * Attempts to remove a specific amount of gold (defined in nuggets) from a player's given wallet inventory.
-	 * @param p The username of the player who's wallet inventory should be modified.
+	 * @param player The UUID of the player who's wallet inventory should be modified.
 	 * @param walletIndex The wallet number to be modifed.
 	 * @param amount The amount of gold (in nuggets) to be removed the player's given wallet inventory.
 	 * @return Whether or not the gold was successfully added (returns false if not enough gold is contained by the player's given wallet inventory, or if the inventory cannot be loaded)
 	 */
-	public static boolean removeGoldFromWalletInv(String p, int walletIndex, int amount){
-		int total = getGoldInWalletInv(p, walletIndex);
+	public static boolean removeGoldFromWalletInv(UUID player, int walletIndex, int amount){
+		int total = getGoldInWalletInv(player, walletIndex);
 		if (total != -1){
 			if (total >= amount){
-				File invF = new File(InventoryUtils.plugin.getDataFolder() + File.separator + "wallets", p + ".inv");
+				File invF = new File(InventoryUtils.plugin.getDataFolder() + File.separator + "wallets", player + ".dat");
 				if(invF.exists()){
 					YamlConfiguration invY = new YamlConfiguration();
 					try {
@@ -162,7 +186,7 @@ public class WalletInv {
 								remaining -= (remaining / 81) * 81;
 								if (InventoryUtils.getAmountInInv(inv, Material.GOLD_BLOCK) > 0 && remaining > 0){
 									InventoryUtils.removeFromInv(inv, Material.GOLD_BLOCK, 0, 1);
-									addGoldToWalletInv(p, walletIndex, 81 - remaining);
+									addGoldToWalletInv(player, walletIndex, 81 - remaining);
 									remaining = 0;
 								}
 							}
@@ -178,7 +202,7 @@ public class WalletInv {
 								InventoryUtils.removeFromInv(inv, Material.GOLD_INGOT, 0, remaining / 9);
 								if (InventoryUtils.getAmountInInv(inv, Material.GOLD_INGOT) > 0 && remaining > 0){
 									InventoryUtils.removeFromInv(inv, Material.GOLD_INGOT, 0, 1);
-									addGoldToWalletInv(p, walletIndex, 9 - remaining);
+									addGoldToWalletInv(player, walletIndex, 9 - remaining);
 									remaining = 0;
 								}
 							}
@@ -219,5 +243,16 @@ public class WalletInv {
 		}
 		else
 			return false;
+	}
+
+	/**
+	 * Attempts to remove a specific amount of gold (defined in nuggets) from a player's given wallet inventory.
+	 * @param player The username of the player who's wallet inventory should be modified.
+	 * @param walletIndex The wallet number to be modifed.
+	 * @param amount The amount of gold (in nuggets) to be removed the player's given wallet inventory.
+	 * @return Whether or not the gold was successfully added (returns false if not enough gold is contained by the player's given wallet inventory, or if the inventory cannot be loaded)
+	 */
+	public static boolean removeGoldFromWalletInv(String player, int walletIndex, int amount){
+		return removeGoldFromWalletInv(getSafeUUID(player), walletIndex, amount);
 	}
 }
