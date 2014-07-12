@@ -79,7 +79,6 @@ public class MiscUtils {
 			if (adjBlock.getType() == material){
 				if (face != BlockFace.UP){
 					@SuppressWarnings("deprecation")
-					//TODO: This doesn't even make any sense. How the hell is this a "magic number?"
 					byte data = adjBlock.getData();
 					byte north = 0x2;
 					byte south = 0x3;
