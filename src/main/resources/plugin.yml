@@ -1,5 +1,5 @@
 name: GoldBank
-version: 3.0.1-SNAPSHOT-jnks$BUILD
+version: 3.0.1
 main: net.amigocraft.GoldBank.GoldBank
 commands:
   gb:
