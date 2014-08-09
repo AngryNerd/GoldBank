@@ -7,6 +7,8 @@ import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.List;
 
+import org.bukkit.OfflinePlayer;
+
 import net.amigocraft.GoldBank.GoldBank;
 import net.amigocraft.GoldBank.api.BankInv;
 import net.amigocraft.GoldBank.util.MiscUtils;
@@ -186,6 +188,81 @@ public class VaultConnector implements Economy {
 	@Override
 	public EconomyResponse withdrawPlayer(String player, String world, double amount){
 		return withdrawPlayer(player, amount);
+	}
+
+	@Override
+	public EconomyResponse createBank(String bank, OfflinePlayer player){
+		 return createBank(bank, player.getName());
+	}
+
+	@Override
+	public boolean createPlayerAccount(OfflinePlayer player){
+		return createPlayerAccount(player.getName());
+	}
+
+	@Override
+	public boolean createPlayerAccount(OfflinePlayer player, String world){
+		return createPlayerAccount(player.getName(), world);
+	}
+
+	@Override
+	public EconomyResponse depositPlayer(OfflinePlayer player, double amount){
+		return depositPlayer(player.getName(), amount);
+	}
+
+	@Override
+	public EconomyResponse depositPlayer(OfflinePlayer player, String world, double amount){
+		return depositPlayer(player.getName(), world, amount);
+	}
+
+	@Override
+	public double getBalance(OfflinePlayer player){
+		return getBalance(player.getName());
+	}
+
+	@Override
+	public double getBalance(OfflinePlayer player, String world){
+		return getBalance(player.getName(), world);
+	}
+
+	@Override
+	public boolean has(OfflinePlayer player, double amount){
+		return has(player.getName(), amount);
+	}
+
+	@Override
+	public boolean has(OfflinePlayer player, String world, double amount){
+		return has(player.getName(), world, amount);
+	}
+
+	@Override
+	public boolean hasAccount(OfflinePlayer player){
+		return hasAccount(player.getName());
+	}
+
+	@Override
+	public boolean hasAccount(OfflinePlayer player, String world){
+		return hasAccount(player.getName(), world);
+	}
+
+	@Override
+	public EconomyResponse isBankMember(String bank, OfflinePlayer player){
+		 return isBankMember(bank, player.getName());
+	}
+
+	@Override
+	public EconomyResponse isBankOwner(String bank, OfflinePlayer player){
+		 return isBankOwner(bank, player.getName());
+	}
+
+	@Override
+	public EconomyResponse withdrawPlayer(OfflinePlayer player, double amount){
+		return withdrawPlayer(player.getName(), amount);
+	}
+
+	@Override
+	public EconomyResponse withdrawPlayer(OfflinePlayer player, String world, double amount){
+		return withdrawPlayer(player.getName(), world, amount);
 	}
 	
 }

@@ -185,18 +185,12 @@ public class MiscUtils {
 	}
 
 	public static UUID getSafeUUID(Player player){
-		try {
-			return UUIDFetcher.getUUID(player.getName());
-		}
-		catch (Exception ex){
-			ex.printStackTrace();
-		}
-		return null;
+		return getSafeUUID(player.getName());
 	}
 
 	public static UUID getSafeUUID(String player){
 		try {
-			return UUIDFetcher.getUUID(player);
+			return GoldBank.onlineUUIDs.get(player);
 		}
 		catch (Exception ex){
 			ex.printStackTrace();

@@ -10,6 +10,7 @@ public class ConfigCheck {
 	public static final String ANSI_RED = "\u001B[31m";
 	public static final String ANSI_WHITE = "\u001B[37m";
 	public static String header = "########################## #\n# GoldBank Configuration # #\n########################## #";
+	@SuppressWarnings("deprecation")
 	public static void check(){
 		// create the default config
 		if(!(new File(plugin.getDataFolder(), "config.yml")).exists()) {
@@ -22,7 +23,7 @@ public class ConfigCheck {
 			YamlConfiguration defConfig = new YamlConfiguration();
 			InputStream defStream = plugin.getResource("config.yml");
 			if(defStream != null){
-				defConfig = YamlConfiguration.loadConfiguration(defStream);
+				defConfig = YamlConfiguration.loadConfiguration(defStream); // I have no idea what this does so I'm going to leave the deprecated method
 				for (String key : y.getKeys(true)){
 					if (!plugin.getConfig().isSet(key) || !validate(key)){
 						plugin.log.warning(ANSI_RED + "[GoldBank] Error detected in config value \"" + key + "\"! We'll take care of it..." + ANSI_WHITE);
@@ -41,6 +42,7 @@ public class ConfigCheck {
 		}
 	}
 
+	@SuppressWarnings("deprecation")
 	public static boolean validate(String key){
 		if (key.equals("interest")){
 			double interest = plugin.getConfig().getDouble("interest");

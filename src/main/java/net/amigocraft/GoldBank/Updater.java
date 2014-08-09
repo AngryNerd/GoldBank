@@ -204,7 +204,8 @@ public class Updater {
     /**
      * Get the result of the update process.
      */
-    public Updater.UpdateResult getResult() {
+    @SuppressWarnings("javadoc")
+	public Updater.UpdateResult getResult() {
         this.waitForThread();
         return this.result;
     }
@@ -212,7 +213,8 @@ public class Updater {
     /**
      * Get the latest version's release type (release, beta, or alpha).
      */
-    public String getLatestType() {
+    @SuppressWarnings("javadoc")
+	public String getLatestType() {
         this.waitForThread();
         return this.versionType;
     }
@@ -220,7 +222,8 @@ public class Updater {
     /**
      * Get the latest version's game version.
      */
-    public String getLatestGameVersion() {
+    @SuppressWarnings("javadoc")
+	public String getLatestGameVersion() {
         this.waitForThread();
         return this.versionGameVersion;
     }
@@ -228,7 +231,8 @@ public class Updater {
     /**
      * Get the latest version's name.
      */
-    public String getLatestName() {
+    @SuppressWarnings("javadoc")
+	public String getLatestName() {
         this.waitForThread();
         return this.versionName;
     }
@@ -236,7 +240,8 @@ public class Updater {
     /**
      * Get the latest version's file link.
      */
-    public String getLatestFileLink() {
+    @SuppressWarnings("javadoc")
+	public String getLatestFileLink() {
         this.waitForThread();
         return this.versionLink;
     }

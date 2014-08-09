@@ -20,7 +20,7 @@ public class WalletInv {
 
 	/**
 	 * Attempts to get the amount of gold in a specified player's given wallet inventory.
-	 * @param p The player who's wallet's inventory should be searched.
+	 * @param player The UUID of the player who's wallet's inventory should be searched.
 	 * @param walletIndex The wallet number to search
 	 * @return The amount of gold (in nuggets) contained by the specified player's given wallet inventory. Note: this method will return 0 if the player's given wallet inventory cannot be loaded.
 	 */

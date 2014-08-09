@@ -5,6 +5,7 @@ import static net.amigocraft.GoldBank.util.MiscUtils.*;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.lang.reflect.InvocationTargetException;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
@@ -13,6 +14,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -24,6 +26,7 @@ import net.amigocraft.GoldBank.api.BankInv;
 import net.amigocraft.GoldBank.economy.VaultConnector;
 import net.amigocraft.GoldBank.Updater;
 import net.amigocraft.GoldBank.util.InventoryUtils;
+import net.amigocraft.GoldBank.util.UUIDFetcher;
 import net.milkbowl.vault.economy.Economy;
 
 import org.apache.commons.lang.WordUtils;
@@ -66,6 +69,7 @@ import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.inventory.PrepareItemCraftEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.ShapedRecipe;
@@ -96,7 +100,9 @@ public class GoldBank extends JavaPlugin implements Listener {
 	public String header = "########################## #\n# GoldBank Configuration # #\n########################## #";
 	public static boolean UUID_SUPPORT = true;
 
-	@SuppressWarnings({"resource"})
+	public static HashMap<String, UUID> onlineUUIDs = new HashMap<String, UUID>();
+
+	@SuppressWarnings("unchecked")
 	@Override
 	public void onEnable(){
 
@@ -485,6 +491,28 @@ public class GoldBank extends JavaPlugin implements Listener {
 				e.printStackTrace();
 			}
 		}
+
+		List<Player> players = new ArrayList<Player>();
+		try {
+			if (Bukkit.class.getMethod("getOnlinePlayers", new Class<?>[0]).getReturnType() == Collection.class)
+				players.addAll(((Collection<? extends Player>)Bukkit.class.getMethod("getOnlinePlayers", new Class<?>[0]).invoke(null, new Object[0])));
+			else
+				players.addAll(Arrays.asList((Player[])Bukkit.class.getMethod("getOnlinePlayers", new Class<?>[0]).invoke(null, new Object[0])));
+		}
+		catch (NoSuchMethodException ex){} // can never happen
+		catch (InvocationTargetException ex){} // can also never happen
+		catch (IllegalAccessException ex){} // can still never happen
+
+		List<String> names = new ArrayList<String>();
+		for (Player p : players)
+			names.add(p.getName());
+		try {
+			onlineUUIDs.putAll(new UUIDFetcher(names).call());
+		}
+		catch (Exception e){
+			e.printStackTrace();
+		}
+
 		log.info(ANSI_GREEN + this + " has been enabled!" + ANSI_WHITE);
 	}
 	public void onDisable(){
@@ -516,7 +544,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 	}
 
 	// initiate function for detecting player clicking sign
-	@SuppressWarnings({ "deprecation", "resource" })
+	@SuppressWarnings({"deprecation"})
 	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onClick(PlayerInteractEvent e){
 		if (e.getAction() == Action.RIGHT_CLICK_BLOCK || e.getAction() == Action.RIGHT_CLICK_AIR){
@@ -685,7 +713,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 											while (sec.length() < 2)
 												sec = "0" + sec;
 											String dateStr = cal.get(Calendar.YEAR) + "-" + month + "-" + day + " " + hour + ":" + min + ":" + sec;
-											//TODO: Phase out "magic numbers" (seriously Bukkit?)
+											//TODO: Phase out "magic numbers"
 											e.getPlayer().sendMessage(ChatColor.DARK_PURPLE + Integer.toString(i) + ") " +
 													ChatColor.DARK_AQUA + dateStr + " " + ChatColor.LIGHT_PURPLE +
 													getSafePlayerName(UUID.fromString(rs.getString("player"))) + " " +
@@ -728,7 +756,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 		}
 	}
 
-	@SuppressWarnings({ "deprecation", "resource" })
+	@SuppressWarnings({"deprecation"})
 	@EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
 	public void onOneClick(PlayerInteractEvent e){
 		// this code is here to prevent bugs when clicking a bank sign with a wallet
@@ -1649,7 +1677,6 @@ public class GoldBank extends JavaPlugin implements Listener {
 	}
 
 	// check if destroyed block is or holds GoldBank sign
-	@SuppressWarnings("resource")
 	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
 	public void onBlockBreak(BlockBreakEvent b){
 		if (b.getBlock().getType() == Material.WALL_SIGN || b.getBlock().getType() == Material.SIGN_POST){
@@ -1977,7 +2004,6 @@ public class GoldBank extends JavaPlugin implements Listener {
 	}
 
 	// listen for chest open
-	@SuppressWarnings("resource")
 	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
 	public void onChestOpen(PlayerInteractEvent o){
 		if (o.getAction() == Action.RIGHT_CLICK_BLOCK){
@@ -2131,7 +2157,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 	}
 
 	// check if placed sign meets criteria
-	@SuppressWarnings({ "deprecation", "resource" })
+	@SuppressWarnings({"deprecation"})
 	@EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
 	public void onSignChange(SignChangeEvent p){
 		Player player = p.getPlayer();
@@ -2531,7 +2557,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 
 	// call the inventory filling function
 	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-	public void onPlayerJoin(PlayerJoinEvent j) throws IOException {
+	public void onPlayerJoin(final PlayerJoinEvent j) throws IOException {
 		Calendar cal = Calendar.getInstance();
 		int dow = cal.get(Calendar.DAY_OF_WEEK);
 		// check value dayofweek
@@ -2573,10 +2599,31 @@ public class GoldBank extends JavaPlugin implements Listener {
 				}
 			}
 		}
+
+		Bukkit.getScheduler().runTaskAsynchronously(this, new Runnable(){ // to prevent hanging the main thread
+			public void run(){
+				try {
+					final UUID uuid = UUIDFetcher.getUUIDOf(j.getPlayer().getName());
+					Bukkit.getScheduler().runTask(GoldBank.plugin, new Runnable(){ // to prevent CMEs
+						public void run(){
+							GoldBank.onlineUUIDs.put(j.getPlayer().getName(), uuid);
+						}
+					});
+				}
+				catch (Exception ex){
+					ex.printStackTrace();
+				}
+			}
+		});
+	}
+	
+	@EventHandler
+	public void onPlayerQuit(PlayerQuitEvent e){
+		onlineUUIDs.remove(e.getPlayer().getName());
 	}
 
 	// commands and stuff :D
-	@SuppressWarnings({ "deprecation", "resource" })
+	@SuppressWarnings({"deprecation"})
 	public boolean onCommand(CommandSender sender, Command cmd, String commandLabel, String[] args){
 		if (commandLabel.equalsIgnoreCase("gb")){
 			if (args.length >= 1){
