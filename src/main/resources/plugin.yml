@@ -1,5 +1,5 @@
 name: GoldBank
-version: 4.0.0-SNAPSHOT
+version: 4.0.0-SNAPSHOT%VERSION%
 main: net.amigocraft.GoldBank.GoldBank
 commands:
   gb:

@@ -1,0 +1,3 @@
+rootProject.name = 'GoldBank'
+include 'SpongeAPI'
+project(':SpongeAPI').projectDir = file('lib/SpongeAPI')
