@@ -14,7 +14,7 @@ group = 'net.amigocraft.goldbank'
 version = '4.0.0-SNAPSHOT'
 
 // Extended project information
-ext.projectName = 'GoldBank'
+ext.projectName = 'goldbank'
 ext.description = 'A gold-based economy plugin for Minecraft servers.'
 ext.inceptionYear = '2012'
 ext.packaging = 'jar'

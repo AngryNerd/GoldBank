@@ -20,7 +20,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package net.amigocraft.GoldBank.bukkit.util;
+package net.amigocraft.goldbank.bukkit.util;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -35,7 +35,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import net.amigocraft.GoldBank.bukkit.GoldBank;
+import net.amigocraft.goldbank.bukkit.GoldBank;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;

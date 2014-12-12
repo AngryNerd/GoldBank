@@ -20,11 +20,11 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package net.amigocraft.GoldBank.bukkit.api;
+package net.amigocraft.goldbank.bukkit.api;
 
 import java.util.HashMap;
 
-import net.amigocraft.GoldBank.bukkit.util.InventoryUtils;
+import net.amigocraft.goldbank.bukkit.util.InventoryUtils;
 
 import org.bukkit.Material;
 import org.bukkit.entity.Player;

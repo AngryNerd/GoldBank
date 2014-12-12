@@ -20,9 +20,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package net.amigocraft.GoldBank.bukkit;
+package net.amigocraft.goldbank.bukkit;
 
-import static net.amigocraft.GoldBank.bukkit.util.MiscUtils.*;
+import static net.amigocraft.goldbank.bukkit.util.MiscUtils.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -44,10 +44,10 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Logger;
 
-import net.amigocraft.GoldBank.bukkit.api.BankInv;
-import net.amigocraft.GoldBank.bukkit.economy.VaultConnector;
-import net.amigocraft.GoldBank.bukkit.util.InventoryUtils;
-import net.amigocraft.GoldBank.bukkit.util.UUIDFetcher;
+import net.amigocraft.goldbank.bukkit.api.BankInv;
+import net.amigocraft.goldbank.bukkit.economy.VaultConnector;
+import net.amigocraft.goldbank.bukkit.util.InventoryUtils;
+import net.amigocraft.goldbank.bukkit.util.UUIDFetcher;
 import net.milkbowl.vault.economy.Economy;
 
 import org.apache.commons.lang.WordUtils;

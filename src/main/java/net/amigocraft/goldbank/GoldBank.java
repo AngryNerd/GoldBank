@@ -20,7 +20,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package net.amigocraft.GoldBank;
+package net.amigocraft.goldbank;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
