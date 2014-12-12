@@ -18,7 +18,7 @@ ext.projectName = 'GoldBank'
 ext.description = 'A gold-based economy plugin for Minecraft servers.'
 ext.inceptionYear = '2012'
 ext.packaging = 'jar'
-ext.versionSuffix = version.contains('SNAPSHOT') && System.getenv("BUILD_NUMBER") ? '-jnks-' + System.getenv("BUILD_NUMBER") : ''
+ext.versionSuffix = version.contains('SNAPSHOT') && System.getenv("BUILD_NUMBER") ? '-jnks' + System.getenv("BUILD_NUMBER") : ''
 
 sourceCompatibility = 1.6
 targetCompatibility = 1.6
