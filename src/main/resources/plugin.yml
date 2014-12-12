@@ -1,6 +1,6 @@
 name: GoldBank
 version: 4.0.0-SNAPSHOT%VERSION%
-main: net.amigocraft.GoldBank.GoldBank
+main: net.amigocraft.GoldBank.bukkit.GoldBank
 commands:
   gb:
     reload:

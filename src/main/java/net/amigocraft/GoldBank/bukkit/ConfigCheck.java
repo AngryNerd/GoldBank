@@ -20,7 +20,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package net.amigocraft.GoldBank;
+package net.amigocraft.GoldBank.bukkit;
 
 import java.io.File;
 import java.io.InputStream;

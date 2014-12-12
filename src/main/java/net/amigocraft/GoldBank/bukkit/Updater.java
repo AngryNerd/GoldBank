@@ -26,7 +26,7 @@
  * This class provides the means to safely and easily update a plugin, or check to see if it is updated using dev.bukkit.org
  */
 
-package net.amigocraft.GoldBank;
+package net.amigocraft.GoldBank.bukkit;
 
 import java.io.*;
 import java.net.MalformedURLException;

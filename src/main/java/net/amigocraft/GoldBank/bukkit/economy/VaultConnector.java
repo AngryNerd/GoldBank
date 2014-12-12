@@ -20,7 +20,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package net.amigocraft.GoldBank.economy;
+package net.amigocraft.GoldBank.bukkit.economy;
 
 import java.io.File;
 import java.sql.Connection;
@@ -31,9 +31,9 @@ import java.util.List;
 
 import org.bukkit.OfflinePlayer;
 
-import net.amigocraft.GoldBank.GoldBank;
-import net.amigocraft.GoldBank.api.BankInv;
-import net.amigocraft.GoldBank.util.MiscUtils;
+import net.amigocraft.GoldBank.bukkit.GoldBank;
+import net.amigocraft.GoldBank.bukkit.api.BankInv;
+import net.amigocraft.GoldBank.bukkit.util.MiscUtils;
 import net.milkbowl.vault.economy.Economy;
 import net.milkbowl.vault.economy.EconomyResponse;
 import net.milkbowl.vault.economy.EconomyResponse.ResponseType;
