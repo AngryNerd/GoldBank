@@ -63,9 +63,6 @@
 				<configuration>
 					<archive>
 						<compress>true</compress>
-						<manifestEntries>
-							<Built-By>Jenkins</Built-By>
-						</manifestEntries>
 					</archive>
 				</configuration>
 			</plugin>
