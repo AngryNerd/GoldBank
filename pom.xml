@@ -2,12 +2,12 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>net.amigocraft.goldbank</groupId>
-	<artifactId>GoldBank</artifactId>
+	<artifactId>goldbank</artifactId>
 	<packaging>jar</packaging>
-	<version>3.0.1</version>
+	<version>4.0.0-SNAPSHOT</version>
 	<name>GoldBank</name>
 	<url>http://dev.bukkit.org/bukkit-plugins/goldbank/</url>
-	<description>A gold-based economy plugin for Bukkit servers.</description>
+	<description>A gold-based economy plugin for Minecraft servers.</description>
 	<ciManagement>
 		<system>jenkins</system>
 		<url>http://ci.amigocraft.net/</url>
@@ -18,7 +18,11 @@
 	<repositories>
 		<repository>
 			<id>bukkit-repo</id>
-			<url>http://repo.bukkit.org/content/groups/public/</url>
+			<url>http://hub.spigotmc.org/nexus/content/groups/public/</url>
+		</repository>
+		<repository>
+			<id>amigocraft-repo</id>
+			<url>http://repo.amigocraft.net/content/groups/public/</url>
 		</repository>
 		<repository>
 			<id>vault-repo</id>
@@ -30,19 +34,13 @@
 			<groupId>org.bukkit</groupId>
 			<artifactId>bukkit</artifactId>
 			<scope>provided</scope>
-			<version>1.7.10-R0.1-SNAPSHOT</version>
+			<version>1.8-R0.1-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>net.milkbowl.vault</groupId>
 			<artifactId>Vault</artifactId>
 			<version>1.4.1</version>
 			<scope>provided</scope>
-		</dependency>
-		<dependency>
-			<groupId>junit</groupId>
-			<artifactId>junit</artifactId>
-			<version>4.8.1</version>
-			<scope>test</scope>
 		</dependency>
 	</dependencies>
 	<build>
@@ -55,7 +53,6 @@
 				<configuration>
 					<source>1.6</source>
 					<target>1.6</target>
-					<complianceLevel>1.6</complianceLevel>
 					<encoding>UTF-8</encoding>
 				</configuration>
 			</plugin>
@@ -64,7 +61,6 @@
 				<artifactId>maven-jar-plugin</artifactId>
 				<version>2.3.2</version>
 				<configuration>
-					<finalName>GoldBank</finalName>
 					<archive>
 						<compress>true</compress>
 						<manifestEntries>
@@ -91,7 +87,7 @@
 				  	 	<phase>prepare-package</phase>
 				 	  	<goals>
 					   		<goal>replace</goal>
-						</goals>				   
+						</goals>
 			 	  	</execution>
 		   		</executions>
 		   		<configuration>
