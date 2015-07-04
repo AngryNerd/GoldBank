@@ -253,14 +253,18 @@ public class GoldBank extends JavaPlugin implements Listener {
 				while (rs2.next()){
 					String username = rs2.getString("username");
 					String uuid;
-					if (uuids.containsKey(username))
+					if (username.equals("MASTER")) {
+						uuid = username;
+					}
+					else if (uuids.containsKey(username)) {
 						uuid = uuids.get(username);
+					}
 					else {
-						uuid = getSafeUUID(rs2.getString("username")).toString();
+						uuid = getSafeUUID(username).toString();
 						uuids.put(username, uuid);
 					}
 					st.executeUpdate("INSERT INTO banks (uuid, world, x, y, z, sign, tier) VALUES ('" +
-							getSafeUUID(rs2.getString("username")) + "', '" +
+							uuid + "', '" +
 							rs2.getString("world") + "', '" +
 							rs2.getInt("x") + "', '" +
 							rs2.getInt("y") + "', '" +
@@ -272,7 +276,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 							messages = 10;
 						else
 							messages = (int)Math.floor(i / (total / 10f));
-						log.info(messages * 10 + "% converted (" + i + " records processed)");
+						log.info((int)Math.floor(100 * i / (float)total) + "% converted (" + i + " records processed)");
 					}
 					i += 1;
 				}
@@ -314,14 +318,14 @@ public class GoldBank extends JavaPlugin implements Listener {
 						uuid = getSafeUUID(username).toString();
 						uuids.put(username, uuid);
 					}
-					st.executeUpdate("UPDATE shops SET creator = '" + getSafeUUID(rs2.getString("creator")) +
+					st.executeUpdate("UPDATE shops SET creator = '" + uuid +
 							"' WHERE id = '" + rs2.getInt("id") + "'");
 					if (i > (total / 10f) * (messages + 1)){
 						if (total == 0)
 							messages = 10;
 						else
 							messages = (int)Math.floor(i / (total / 10f));
-						log.info(messages * 10 + "% converted (" + i + " records processed)");
+						log.info((int)Math.floor(100 * i / (float)total) + "% converted (" + i + " records processed)");
 					}
 					i += 1;
 				}
@@ -362,7 +366,7 @@ public class GoldBank extends JavaPlugin implements Listener {
 							messages = 10;
 						else
 							messages = (int)Math.floor(i / (total / 10f));
-						log.info(messages * 10 + "% converted (" + i + " records processed)");
+						log.info((int)Math.floor(100 * i / (float)total) + "% converted (" + i + " records processed)");
 					}
 					i += 1;
 				}
@@ -378,36 +382,44 @@ public class GoldBank extends JavaPlugin implements Listener {
 				log.info("Finished converting tables! :)");
 				log.info("Now we need to rename the data files. This shouldn't take very long. How was your tea, by the way?");
 				for (File f : new File(getDataFolder(), "inventories").listFiles()){
-					String username = f.getName().split("\\.")[0];
-					String uuid;
-					if (uuids.containsKey(username))
-						uuid = uuids.get(username);
-					else {
-						uuid = getSafeUUID(username).toString();
-						uuids.put(username, uuid);
+					try {
+						String username = f.getName().split("\\.")[0];
+						String uuid;
+						if (uuids.containsKey(username))
+							uuid = uuids.get(username);
+						else {
+							uuid = getSafeUUID(username).toString();
+							uuids.put(username, uuid);
+						}
+						YamlConfiguration y = new YamlConfiguration();
+						y.load(f);
+						y.set("username", username);
+						y.save(f);
+						y = null;
+						f.renameTo(new File(getDataFolder() + File.separator + "inventories", uuid + ".dat"));
+					} catch (Throwable ex) {
+						ex.printStackTrace();
 					}
-					YamlConfiguration y = new YamlConfiguration();
-					y.load(f);
-					y.set("username", username);
-					y.save(f);
-					y = null;
-					f.renameTo(new File(getDataFolder() + File.separator + "inventories", uuid + ".dat"));
 				}
 				for (File f : walletDir.listFiles()){
-					String username = f.getName().split("\\.")[0];
-					String uuid;
-					if (uuids.containsKey(username))
-						uuid = uuids.get(username);
-					else {
-						uuid = getSafeUUID(username).toString();
-						uuids.put(username, uuid);
+					try {
+						String username = f.getName().split("\\.")[0];
+						String uuid;
+						if (uuids.containsKey(username))
+							uuid = uuids.get(username);
+						else {
+							uuid = getSafeUUID(username).toString();
+							uuids.put(username, uuid);
+						}
+						YamlConfiguration y = new YamlConfiguration();
+						y.load(f);
+						y.set("username", username);
+						y.save(f);
+						y = null;
+						f.renameTo(new File(getDataFolder() + File.separator + "wallets", uuid + ".dat"));
+					} catch (Throwable ex) {
+						ex.printStackTrace();
 					}
-					YamlConfiguration y = new YamlConfiguration();
-					y.load(f);
-					y.set("username", username);
-					y.save(f);
-					y = null;
-					f.renameTo(new File(getDataFolder() + File.separator + "wallets", uuid + ".dat"));
 				}
 				uuids.clear();
 				log.info("Thanks for your patience. We've converted all data to the new format, so you should be good to go. :)");

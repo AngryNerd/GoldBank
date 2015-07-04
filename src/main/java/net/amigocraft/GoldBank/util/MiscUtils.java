@@ -190,7 +190,9 @@ public class MiscUtils {
 
 	public static UUID getSafeUUID(String player){
 		try {
-			return GoldBank.onlineUUIDs.get(player);
+			return GoldBank.onlineUUIDs.containsKey(player)
+					? GoldBank.onlineUUIDs.get(player)
+					: UUIDFetcher.getUUIDOf(player);
 		}
 		catch (Exception ex){
 			ex.printStackTrace();

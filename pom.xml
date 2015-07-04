@@ -4,7 +4,7 @@
 	<groupId>net.amigocraft.goldbank</groupId>
 	<artifactId>GoldBank</artifactId>
 	<packaging>jar</packaging>
-	<version>3.0.1</version>
+	<version>3.0.2</version>
 	<name>GoldBank</name>
 	<url>http://dev.bukkit.org/bukkit-plugins/goldbank/</url>
 	<description>A gold-based economy plugin for Bukkit servers.</description>
